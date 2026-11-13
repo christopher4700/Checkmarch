@@ -42,7 +42,15 @@ Each module folder has API notes (`*-API.md`), a test file, and a self-contained
 
 ## Rebuild and test
 
-Node 22 or newer.
+Node 22 or newer. To run every suite at once, exactly as CI does:
+
+```bash
+node test-all.mjs   # from the repository root; about 15 s, exits 1 if any suite fails
+```
+
+It rebuilds `game.html`, then runs the core suites and every `checkmarch-*/test-*.mjs` side by side, so a new module's tests are picked up on their own. GitHub Actions (`.github/workflows/tests.yml`) runs the same command on every pull request and every push to `main`, and also fails if the committed `game.html` doesn't match a fresh build. A change to Markdown files alone doesn't start it.
+
+The suites one by one:
 
 ```bash
 cd checkmarch
@@ -64,6 +72,6 @@ node checkmarch-music/test-music.mjs
 node checkmarch-fairy/test-fairy.mjs
 ```
 
-Every command exits non-zero on failure, and all of them together take well under a minute. `node balance-bot.mjs` without `--check` plays a full set of headless runs and prints a longer report; it takes a minute or more and always exits 0.
+Every command exits non-zero on failure. The balance check fails when the fixed-seed attack win rate falls outside its target band. `node balance-bot.mjs` without `--check` plays a full set of headless runs and prints a longer report; it takes a minute or more and always exits 0.
 
 The design document is kept as a claude.ai artifact: https://claude.ai/artifact/DeeSfVv1nmAYb13DR1wSgU
