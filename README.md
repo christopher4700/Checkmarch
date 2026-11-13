@@ -48,7 +48,7 @@ Node 22 or newer. To run every suite at once, exactly as CI does:
 node test-all.mjs   # from the repository root; about 15 s, exits 1 if any suite fails
 ```
 
-It rebuilds `game.html`, then runs the core suites and every `checkmarch-*/test-*.mjs` side by side, so a new module's tests are picked up on their own. GitHub Actions (`.github/workflows/tests.yml`) runs the same command on every pull request and every push to `main`, and also fails if the committed `game.html` doesn't match a fresh build. A change to Markdown files alone doesn't start it.
+It rebuilds `game.html`, then runs the core suites and every `checkmarch-*/test-*.mjs` side by side, so a new module's tests are picked up on their own. GitHub Actions (`.github/workflows/tests.yml`) runs the same command on every pull request and every push to `main`, and also fails if the committed `game.html` doesn't match a fresh build. A change to Markdown files alone doesn't start it. The build minifies the page with `acorn` when it can find it, and CI installs `acorn@8.18.0` for that; if you rebuild `game.html` to commit it, have the same available (`npm install --no-save acorn@8.18.0` at the repository root), or the committed page comes out unminified and CI calls it stale.
 
 The suites one by one:
 

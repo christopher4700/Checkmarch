@@ -21,6 +21,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
+      # build.mjs minifies game.html with acorn when it can find it (the cloud sessions have it in /opt/node-tools);
+      # without it the page is built unminified and the committed game.html would look stale. Same version, no lockfile.
+      - name: acorn for the build's size pass
+        run: npm install --no-save --no-package-lock --no-audit --no-fund acorn@8.18.0
       - name: All suites (build, engine perft and mates, world, balance check, every module)
         run: node test-all.mjs
       - name: Committed game.html matches its sources
