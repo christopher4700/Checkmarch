@@ -1,0 +1,35 @@
+# Checkmarch tests: every test suite, on each pull request and each push to main. Plain node, no npm install, one job
+# of well under a minute, because Actions minutes cost Christopher money; changes to Markdown files alone don't start it.
+# Run the same locally with `node test-all.mjs` from the repository root.
+name: Tests
+on:
+  pull_request:
+    paths-ignore: ["**/*.md"]
+  push:
+    branches: [main]
+    paths-ignore: ["**/*.md"]
+concurrency:
+  group: tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      # build.mjs minifies game.html with acorn when it can find it (the cloud sessions have it in /opt/node-tools);
+      # without it the page is built unminified and the committed game.html would look stale. Same version, no lockfile.
+      - name: acorn for the build's size pass
+        run: npm install --no-save --no-package-lock --no-audit --no-fund acorn@8.18.0
+      - name: All suites (build, engine perft and mates, world, balance check, every module)
+        run: node test-all.mjs
+      - name: Committed game.html matches its sources
+        run: |
+          if ! git diff --exit-code --stat -- checkmarch/game.html; then
+            echo "game.html is stale. Run node build.mjs in checkmarch/ and commit it."
+            exit 1
+          fi
