@@ -1,0 +1,539 @@
+<title>Checkmarch Audio Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#f6f1e7; --panel:#fffaf0; --fg:#2b2620; --muted:#6f655a; --line:#e2d8c6;
+  --btn:#efe5d3; --btn-fg:#2b2620; --accent:#3f6e8c; --accent-fg:#ffffff; --danger:#c0392b;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#1b1f26; --panel:#232934; --fg:#e7e9ee; --muted:#9aa3b2; --line:#343c4a;
+  --btn:#2d3542; --btn-fg:#e7e9ee; --accent:#7fb0d3; --accent-fg:#10151c; --danger:#e0645a;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#1b1f26; --panel:#232934; --fg:#e7e9ee; --muted:#9aa3b2; --line:#343c4a;
+  --btn:#2d3542; --btn-fg:#e7e9ee; --accent:#7fb0d3; --accent-fg:#10151c; --danger:#e0645a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+main{max-width:560px;margin:0 auto}
+h1{font-size:1.35rem;margin:8px 0 2px}
+p{margin:0 0 12px;color:var(--muted)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px}
+button{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--btn);color:var(--btn-fg);
+  font:inherit;padding:0 14px;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#enable{width:100%;background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600}
+#enable[aria-pressed="true"]{background:var(--btn);color:var(--btn-fg);border-color:var(--line)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid button.raid{color:var(--danger)}
+.row{display:flex;align-items:center;gap:12px}
+input[type=range]{flex:1;min-height:44px;accent-color:var(--accent)}
+#level{font-variant-numeric:tabular-nums;min-width:9ch;text-align:right}
+.status{font-size:.85rem;color:var(--muted);margin-top:8px}
+</style>
+<main>
+  <h1>Checkmarch audio</h1>
+  <p>Everything here is synthesized live with Web Audio. Tap Enable first; browsers only allow sound after a tap.</p>
+
+  <section>
+    <button id="enable" aria-pressed="false">Enable sound</button>
+    <div class="status" id="status">Sound is off.</div>
+  </section>
+
+  <section>
+    <h2>Ambient intensity</h2>
+    <div class="row">
+      <input id="intensity" type="range" min="0" max="3" step="1" value="0" aria-label="Intensity">
+      <span id="level">0 · Map</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>One-shots</h2>
+    <div class="grid" id="sfx"></div>
+  </section>
+</main>
+<script type="module">
+// audio.mjs inlined below by build-demo.mjs (no external files).
+// Checkmarch audio module. Everything synthesized with Web Audio; no files, no dependencies.
+// Usage: const audio = createAudio(); button.onclick = () => audio.unlock();
+//        audio.setIntensity(1); audio.play('move');
+// Safe everywhere: before unlock(), when disabled, or without AudioContext, every call no-ops.
+
+function createAudio(opts) {
+  opts = opts || {};
+  const BPM = 72;
+  const STEP = 60 / BPM / 2;          // eighth note, ~0.417s
+  const STEPS_PER_CHORD = 16;         // two 4/4 bars per chord, ~6.7s
+  const LOOKAHEAD = 0.35;             // seconds scheduled ahead
+  const TICK_MS = 60;
+
+  // Key: A minor. Pad voicings are [bass, ...pad tones] in MIDI.
+  const CALM = [
+    [45, 57, 60, 64, 71],   // Am(add9)
+    [41, 53, 57, 60, 64],   // Fmaj7
+    [48, 55, 59, 62, 64],   // C6/9-ish (G B D E over C)
+    [43, 50, 55, 59, 62],   // G
+  ];
+  const TENSE = [
+    [45, 57, 60, 64, 69],   // Am
+    [41, 53, 57, 60, 65],   // F
+    [38, 53, 57, 62, 65],   // Dm
+    [40, 56, 59, 62, 64],   // E7 (harmonic-minor dominant)
+  ];
+  // Pluck motif over 16 steps: index into chord pad tones (1..4), -1 = rest.
+  const MOTIF = [1, -1, -1, 3, -1, -1, 2, -1, 4, -1, -1, -1, 3, -1, 2, -1];
+  const PLUCK_P = [0.35, 0.7, 0.75, 0.9];
+  // Layer targets per intensity: pad, ocean, pluck, bass, heart, tick, drum, drone
+  const MIX = [
+    { pad: 0.55, ocean: 0.40, pluck: 0.28, bass: 0.00, heart: 0.00, tick: 0.00, drum: 0.00, drone: 0.00 },
+    { pad: 0.50, ocean: 0.28, pluck: 0.32, bass: 0.42, heart: 0.00, tick: 0.00, drum: 0.00, drone: 0.00 },
+    { pad: 0.48, ocean: 0.22, pluck: 0.32, bass: 0.45, heart: 0.55, tick: 0.30, drum: 0.00, drone: 0.10 },
+    { pad: 0.48, ocean: 0.18, pluck: 0.36, bass: 0.50, heart: 0.35, tick: 0.25, drum: 0.55, drone: 0.26 },
+  ];
+  const PAD_CUTOFF = [850, 1100, 1350, 1700];
+  const FADE_TC = 1.2; // time constant for layer crossfades (s)
+
+  const vol = { master: opts.master ?? 0.8, bed: opts.bed ?? 0.5, sfx: opts.sfx ?? 0.35 };
+  let enabled = opts.enabled ?? true;
+  let intensity = 0;
+  let ctx = null, nodes = null, timer = null, failed = false;
+  let nextStepTime = 0, step = 0, chordIx = 0, chord = CALM[0];
+  const lastPlay = Object.create(null);
+  const layerOn = Object.create(null); // last time each layer target was > 0
+
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const now = () => (ctx ? ctx.currentTime : 0);
+
+  // ---------- graph ----------
+  function build() {
+    const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+    if (!AC) { failed = true; return false; }
+    ctx = new AC();
+    const n = {};
+    n.comp = ctx.createDynamicsCompressor();
+    n.comp.threshold.value = -18; n.comp.knee.value = 12; n.comp.ratio.value = 4;
+    n.comp.attack.value = 0.005; n.comp.release.value = 0.25;
+    n.master = ctx.createGain(); n.master.gain.value = 0;
+    n.master.connect(n.comp); n.comp.connect(ctx.destination);
+
+    n.bed = ctx.createGain(); n.bed.gain.value = vol.bed;
+    n.duck = ctx.createGain(); n.duck.gain.value = 1;
+    n.bed.connect(n.duck); n.duck.connect(n.master);
+    n.sfx = ctx.createGain(); n.sfx.gain.value = vol.sfx; n.sfx.connect(n.master);
+
+    // Reverb: generated stereo impulse (decaying noise).
+    n.verb = ctx.createConvolver();
+    n.verb.buffer = makeImpulse(2.6, 2.8);
+    n.verbRet = ctx.createGain(); n.verbRet.gain.value = 0.32;
+    n.verb.connect(n.verbRet); n.verbRet.connect(n.master);
+
+    // Layer buses
+    n.layer = {};
+    for (const k of Object.keys(MIX[0])) {
+      const g = ctx.createGain(); g.gain.value = 0; g.connect(n.bed); n.layer[k] = g;
+    }
+    n.padFilter = ctx.createBiquadFilter(); n.padFilter.type = 'lowpass';
+    n.padFilter.frequency.value = PAD_CUTOFF[0]; n.padFilter.Q.value = 0.6;
+    n.padFilter.connect(n.layer.pad);
+    sendToVerb(n.layer.pad, 0.6, n);
+    sendToVerb(n.layer.pluck, 0.5, n);
+    sendToVerb(n.layer.drum, 0.2, n);
+
+    // Ocean: looped noise -> lowpass with slow LFOs on cutoff and swell.
+    const noise = ctx.createBufferSource();
+    noise.buffer = makeNoise(6); noise.loop = true;
+    const oLP = ctx.createBiquadFilter(); oLP.type = 'lowpass'; oLP.frequency.value = 520; oLP.Q.value = 0.3;
+    const swell = ctx.createGain(); swell.gain.value = 0.55;
+    noise.connect(oLP); oLP.connect(swell);
+    let oOut = swell;
+    if (ctx.createStereoPanner) {
+      const pan = ctx.createStereoPanner(); swell.connect(pan); oOut = pan;
+      lfo(0.031, 0.4, pan.pan);
+    }
+    oOut.connect(n.layer.ocean);
+    lfo(0.071, 0.42, swell.gain);
+    lfo(0.047, 260, oLP.frequency);
+    noise.start();
+
+    // Drone (boss layer): two lowpassed saws on root + fifth, persistent, retuned per chord.
+    const dLP = ctx.createBiquadFilter(); dLP.type = 'lowpass'; dLP.frequency.value = 380; dLP.Q.value = 1.2;
+    lfo(0.09, 140, dLP.frequency);
+    dLP.connect(n.layer.drone);
+    n.drone = [0, 7, 12].map((iv, i) => {
+      const o = ctx.createOscillator(); o.type = i === 2 ? 'triangle' : 'sawtooth';
+      o.frequency.value = mtof(33 + iv); o.detune.value = (i - 1) * 6;
+      const g = ctx.createGain(); g.gain.value = i === 2 ? 0.25 : 0.32;
+      o.connect(g); g.connect(dLP); o.start();
+      return { o, iv };
+    });
+    nodes = n;
+    applyMix(true);
+    return true;
+  }
+
+  function sendToVerb(src, amt, n) {
+    const g = ctx.createGain(); g.gain.value = amt; src.connect(g); g.connect(n.verb);
+  }
+  function lfo(rate, depth, param) {
+    const o = ctx.createOscillator(); o.frequency.value = rate;
+    const g = ctx.createGain(); g.gain.value = depth;
+    o.connect(g); g.connect(param); o.start();
+  }
+  function makeNoise(sec) {
+    const len = Math.floor(ctx.sampleRate * sec);
+    const b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+    // pinkish noise (Paul Kellet's economy filter) for a softer ocean
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < len; i++) {
+      const w = Math.random() * 2 - 1;
+      b0 = 0.99765 * b0 + w * 0.0990460; b1 = 0.96300 * b1 + w * 0.2965164; b2 = 0.57000 * b2 + w * 1.0526913;
+      d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.11;
+    }
+    // crossfade tail into head so the loop is seamless
+    const xf = Math.floor(ctx.sampleRate * 0.25);
+    for (let i = 0; i < xf; i++) { const a = i / xf; d[i] = d[i] * a + d[len - xf + i] * (1 - a); }
+    return b;
+  }
+  function makeImpulse(sec, decay) {
+    const len = Math.floor(ctx.sampleRate * sec);
+    const b = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = b.getChannelData(c);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    return b;
+  }
+
+  function applyMix(instant) {
+    if (!nodes) return;
+    const t = now(), m = MIX[intensity];
+    for (const k in m) {
+      const p = nodes.layer[k].gain;
+      if (instant) p.setValueAtTime(m[k], t); else { p.cancelScheduledValues(t); p.setTargetAtTime(m[k], t, FADE_TC); }
+      if (m[k] > 0) layerOn[k] = Infinity; else if (layerOn[k] === Infinity) layerOn[k] = t;
+    }
+    const f = nodes.padFilter.frequency;
+    f.cancelScheduledValues(t); f.setTargetAtTime(PAD_CUTOFF[intensity], t, 2);
+  }
+  // Skip scheduling notes for layers that have been silent for a while (saves CPU).
+  const live = (k) => layerOn[k] !== undefined && (layerOn[k] === Infinity || now() - layerOn[k] < FADE_TC * 5);
+
+  // ---------- small synth helpers ----------
+  function env(g, t, peak, a, d) {
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+  }
+  function tone(type, freq, t, dur, dest, peak, a = 0.005, detune = 0) {
+    const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t); o.detune.value = detune;
+    const g = ctx.createGain(); env(g, t, peak, a, dur);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + a + dur + 0.05);
+    return o;
+  }
+  function noiseBurst(t, dur, dest, peak, type, freq, q) {
+    const s = ctx.createBufferSource();
+    if (!nodes.burst) nodes.burst = makeNoise(0.5);
+    s.buffer = nodes.burst;
+    const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = ctx.createGain(); env(g, t, peak, 0.002, dur);
+    s.connect(f); f.connect(g); g.connect(dest);
+    s.start(t, Math.random() * 0.3); s.stop(t + dur + 0.05);
+  }
+
+  // ---------- bed voices ----------
+  function padChord(t, c, dur) {
+    const tones = c.slice(1);
+    for (const m of tones) {
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.045, t + 2.4);
+      g.gain.setValueAtTime(0.045, t + dur);
+      g.gain.setTargetAtTime(0, t + dur, 1.1);
+      g.connect(nodes.padFilter);
+      for (const [type, det] of [['sawtooth', -7], ['triangle', 7]]) {
+        const o = ctx.createOscillator(); o.type = type; o.frequency.value = mtof(m); o.detune.value = det + (Math.random() * 4 - 2);
+        o.connect(g); o.start(t); o.stop(t + dur + 6);
+      }
+    }
+    // soft sub on the bass note
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.06, t + 2);
+    g.gain.setValueAtTime(0.06, t + dur); g.gain.setTargetAtTime(0, t + dur, 1);
+    const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = mtof(c[0]);
+    o.connect(g); g.connect(nodes.layer.pad); o.start(t); o.stop(t + dur + 5);
+  }
+  function pluck(t, m, vel) {
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 1;
+    f.frequency.setValueAtTime(3200, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.35);
+    f.connect(nodes.layer.pluck);
+    tone('triangle', mtof(m), t, 1.1, f, 0.12 * vel, 0.004);
+    tone('sine', mtof(m + 12), t, 0.5, f, 0.03 * vel, 0.004);
+  }
+  function bassNote(t, m, vel) {
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 480; f.connect(nodes.layer.bass);
+    tone('triangle', mtof(m), t, 0.4, f, 0.22 * vel, 0.01);
+    tone('sine', mtof(m), t, 0.5, f, 0.18 * vel, 0.01);
+  }
+  function heartbeat(t, vel) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(72, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.18);
+    const g = ctx.createGain(); env(g, t, 0.35 * vel, 0.008, 0.22);
+    o.connect(g); g.connect(nodes.layer.heart); o.start(t); o.stop(t + 0.3);
+  }
+  function drum(t, low, vel) {
+    const o = ctx.createOscillator(); o.type = 'sine';
+    const f0 = low ? 95 : 150;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.5, t + 0.25);
+    const g = ctx.createGain(); env(g, t, 0.4 * vel, 0.004, low ? 0.45 : 0.25);
+    o.connect(g); g.connect(nodes.layer.drum); o.start(t); o.stop(t + 0.55);
+    noiseBurst(t, 0.06, nodes.layer.drum, 0.12 * vel, 'lowpass', 900, 0.7);
+  }
+
+  function scheduleStep(t) {
+    const s = step % STEPS_PER_CHORD;
+    if (s === 0) {
+      const prog = intensity >= 2 ? TENSE : CALM;
+      chord = prog[chordIx % prog.length];
+      chordIx++;
+      if (live('pad')) padChord(t, chord, STEPS_PER_CHORD * STEP);
+      for (const d of nodes.drone) d.o.frequency.setTargetAtTime(mtof(chord[0] - 12 + d.iv), t, 0.4);
+    }
+    const bar = s % 8;
+    // Pluck motif, octave above the pad tones.
+    if (live('pluck')) {
+      const ix = MOTIF[s];
+      if (ix > 0 && Math.random() < PLUCK_P[intensity]) pluck(t, chord[ix] + 12, 0.8 + Math.random() * 0.2);
+      else if (ix < 0 && intensity === 3 && Math.random() < 0.35) pluck(t, chord[1 + (s % 4)] + 12, 0.45);
+    }
+    if (live('bass') && (bar === 0 || bar === 3 || bar === 6)) bassNote(t, chord[0] + (bar === 6 ? 12 : 0), bar === 0 ? 1 : 0.7);
+    if (live('heart') && bar === 0) { heartbeat(t, 1); heartbeat(t + 0.24, 0.6); }
+    if (live('tick')) noiseBurst(t, 0.02, nodes.layer.tick, bar % 2 ? 0.05 : 0.08, 'highpass', 6500, 0.7);
+    if (live('drum')) {
+      if (bar === 0 || bar === 3) drum(t, true, 1);
+      else if (bar === 4) drum(t, true, 0.5);
+      else if (bar === 6 || bar === 7) drum(t, false, bar === 7 ? 0.7 : 0.5);
+    }
+    step++;
+  }
+
+  function tick() {
+    try {
+      if (!ctx || ctx.state !== 'running') return;
+      const t = now();
+      if (nextStepTime < t) nextStepTime = t + 0.05; // fell behind (throttled tab): resync
+      while (nextStepTime < t + LOOKAHEAD) { scheduleStep(nextStepTime); nextStepTime += STEP; }
+    } catch (e) { /* never throw from the scheduler */ }
+  }
+  function startLoop() {
+    if (timer || !ctx) return;
+    nextStepTime = now() + 0.1;
+    timer = setInterval(tick, TICK_MS);
+    tick();
+  }
+  function stopLoop() { if (timer) { clearInterval(timer); timer = null; } }
+
+  function fadeMaster(target, tc) {
+    if (!nodes) return;
+    const p = nodes.master.gain, t = now();
+    p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); p.setTargetAtTime(target, t, tc);
+  }
+  function duck(amount, hold) {
+    const p = nodes.duck.gain, t = now();
+    p.cancelScheduledValues(t); p.setValueAtTime(p.value, t);
+    p.setTargetAtTime(amount, t, 0.05); p.setTargetAtTime(1, t + hold, 0.8);
+  }
+
+  // ---------- one-shots ----------
+  const MIN_GAP = { move: 0.03, capture: 0.05, check: 0.3, promote: 0.3, win: 1.5, lose: 1.5, coin: 0.035, buy: 0.06, raid: 2.5 };
+  const SFX = {
+    move(t, out) {
+      const r = 1 + (Math.random() * 0.1 - 0.05);
+      noiseBurst(t, 0.035, out, 0.5, 'bandpass', 1900 * r, 3.5);
+      tone('sine', 820 * r, t, 0.035, out, 0.22, 0.001);
+      tone('triangle', 410 * r, t, 0.06, out, 0.1, 0.001);
+    },
+    capture(t, out) {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.2);
+      const g = ctx.createGain(); env(g, t, 0.7, 0.004, 0.3);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.4);
+      noiseBurst(t, 0.09, out, 0.35, 'lowpass', 420, 0.8);
+      noiseBurst(t, 0.03, out, 0.25, 'bandpass', 1500, 2);
+    },
+    check(t, out) {
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2400; f.connect(out);
+      for (const [m, dt, d] of [[76, 0, 0.16], [77, 0.17, 0.42]]) { // E5 -> F5: b2 over A minor
+        tone('triangle', mtof(m), t + dt, d, f, 0.32, 0.008);
+        tone('sine', mtof(m - 12), t + dt, d, f, 0.16, 0.008);
+        tone('sawtooth', mtof(m), t + dt, d * 0.8, f, 0.04, 0.01, 8);
+      }
+    },
+    promote(t, out) {
+      [81, 88, 93].forEach((m, i) => {
+        const tt = t + i * 0.07, f0 = mtof(m);
+        for (const [ratio, pk, d] of [[1, 0.22, 1.3], [2.76, 0.07, 0.6], [5.4, 0.03, 0.3]]) tone('sine', f0 * ratio, tt, d, out, pk, 0.002);
+      });
+      sendBurstToVerb(t, 0.5);
+    },
+    win(t, out) {
+      duck(0.45, 1.4);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2600; f.connect(out);
+      const seq = [69, 73, 76, 81]; // A major arpeggio (picardy lift from A minor)
+      seq.forEach((m, i) => brass(t + i * 0.11, m, 0.1, f, 0.22));
+      [73, 76, 81].forEach((m) => brass(t + 0.46, m, 0.9, f, 0.16));
+      brass(t + 0.46, 57, 0.9, f, 0.14);
+      sendBurstToVerb(t, 1.3);
+    },
+    lose(t, out) {
+      duck(0.45, 1.6);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass';
+      f.frequency.setValueAtTime(1800, t); f.frequency.exponentialRampToValueAtTime(350, t + 1.4); f.connect(out);
+      [64, 62, 60, 57].forEach((m, i) => {
+        const last = i === 3, tt = t + i * 0.22;
+        const o = tone('triangle', mtof(m), tt, last ? 1.0 : 0.22, f, 0.3, 0.01);
+        tone('sine', mtof(m - 12), tt, last ? 1.1 : 0.24, f, 0.2, 0.01);
+        if (last) o.frequency.exponentialRampToValueAtTime(mtof(m) * 0.94, tt + 1.0);
+      });
+    },
+    coin(t, out) {
+      tone('sine', mtof(100), t, 0.1, out, 0.13, 0.002);
+      tone('sine', mtof(107), t + 0.045, 0.16, out, 0.11, 0.002);
+    },
+    buy(t, out) {
+      const o = ctx.createOscillator(); o.type = 'triangle';
+      o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(95, t + 0.08);
+      const g = ctx.createGain(); env(g, t, 0.45, 0.002, 0.14);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.2);
+      noiseBurst(t, 0.05, out, 0.35, 'bandpass', 650, 1.5);
+      noiseBurst(t + 0.045, 0.03, out, 0.2, 'bandpass', 2200, 3);
+    },
+    raid(t, out) {
+      duck(0.55, 1.1);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2800; f.connect(out);
+      for (let i = 0; i < 6; i++) {
+        const hi = i % 2 === 0, tt = t + i * 0.16;
+        const o = tone('triangle', hi ? 880 : 660, tt, 0.14, f, 0.26, 0.01);
+        o.frequency.linearRampToValueAtTime(hi ? 900 : 640, tt + 0.14);
+        tone('sine', hi ? 440 : 330, tt, 0.14, f, 0.1, 0.01);
+      }
+    },
+  };
+  function brass(t, m, d, dest, pk) {
+    tone('sawtooth', mtof(m), t, d, dest, pk * 0.35, 0.02, -5);
+    tone('triangle', mtof(m), t, d, dest, pk, 0.015, 5);
+  }
+  // Route a short copy of the sfx bus into the reverb for a bit of space on bright cues.
+  function sendBurstToVerb(t, hold) {
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.setTargetAtTime(0, t + hold, 0.3);
+    nodes.sfx.connect(g); g.connect(nodes.verb);
+    setTimeout(() => { try { nodes.sfx.disconnect(g); } catch (e) { /* */ } }, (hold + 2) * 1000);
+  }
+
+  // ---------- visibility: pause when tab hidden (phone battery) ----------
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', () => {
+      try {
+        if (!ctx) return;
+        if (document.hidden) { stopLoop(); ctx.suspend(); }
+        else if (enabled) { ctx.resume().then(startLoop, () => {}); }
+      } catch (e) { /* */ }
+    });
+  }
+
+  // ---------- public API ----------
+  return {
+    unlock() {
+      try {
+        if (failed) return false;
+        if (!ctx && !build()) return false;
+        if (ctx.state !== 'running') ctx.resume().catch(() => {});
+        // iOS: play a silent buffer inside the gesture
+        const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);
+        if (enabled) { fadeMaster(vol.master, 0.6); startLoop(); }
+        return true;
+      } catch (e) { failed = true; return false; }
+    },
+    setEnabled(on) {
+      enabled = !!on;
+      try {
+        if (!ctx) return;
+        if (enabled) {
+          ctx.resume().catch(() => {});
+          fadeMaster(vol.master, 0.4); startLoop();
+        } else {
+          fadeMaster(0, 0.12); stopLoop();
+          setTimeout(() => { try { if (!enabled && ctx) ctx.suspend(); } catch (e) { /* */ } }, 600);
+        }
+      } catch (e) { /* */ }
+    },
+    setIntensity(level) {
+      const l = Math.max(0, Math.min(3, Math.round(Number(level) || 0)));
+      if (l === intensity && nodes) return;
+      intensity = l;
+      try { applyMix(false); } catch (e) { /* */ }
+    },
+    play(event) {
+      try {
+        if (!ctx || !enabled || !SFX[event]) return;
+        if (ctx.state !== 'running') { ctx.resume().catch(() => {}); return; }
+        const t = now();
+        if (lastPlay[event] !== undefined && t - lastPlay[event] < MIN_GAP[event]) return;
+        lastPlay[event] = t;
+        SFX[event](t + 0.01, nodes.sfx);
+      } catch (e) { /* */ }
+    },
+    setVolume(v) {
+      v = v || {};
+      for (const k of ['master', 'bed', 'sfx']) if (typeof v[k] === 'number') vol[k] = Math.max(0, Math.min(1, v[k]));
+      try {
+        if (!nodes) return;
+        const t = now();
+        nodes.bed.gain.setTargetAtTime(vol.bed, t, 0.1);
+        nodes.sfx.gain.setTargetAtTime(vol.sfx, t, 0.1);
+        if (enabled) fadeMaster(vol.master, 0.1);
+      } catch (e) { /* */ }
+    },
+    get state() {
+      return { supported: !failed, unlocked: !!ctx, running: !!ctx && ctx.state === 'running', enabled, intensity };
+    },
+  };
+}
+
+const audio = createAudio();
+const NAMES = ['Map', 'Battle', 'Danger', 'Citadel'];
+const $ = (id) => document.getElementById(id);
+let on = false;
+function refresh(){
+  $('enable').textContent = on ? 'Mute sound' : 'Enable sound';
+  $('enable').setAttribute('aria-pressed', String(on));
+  const s = audio.state;
+  $('status').textContent = !s.supported ? 'Web Audio is not available in this browser.'
+    : on ? 'Playing. Intensity ' + s.intensity + ' (' + NAMES[s.intensity] + ').' : 'Sound is off.';
+}
+$('enable').addEventListener('click', () => {
+  on = !on;
+  if (on) { audio.unlock(); audio.setEnabled(true); } else audio.setEnabled(false);
+  refresh();
+});
+$('intensity').addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  audio.setIntensity(v);
+  $('level').textContent = v + ' · ' + NAMES[v];
+  refresh();
+});
+for (const ev of ['move','capture','check','promote','win','lose','coin','buy','raid']) {
+  const b = document.createElement('button');
+  b.textContent = ev[0].toUpperCase() + ev.slice(1);
+  if (ev === 'raid') b.className = 'raid';
+  b.addEventListener('click', () => { if (!on) { on = true; audio.unlock(); audio.setEnabled(true); refresh(); } audio.play(ev); });
+  $('sfx').appendChild(b);
+}
+refresh();
+</script>

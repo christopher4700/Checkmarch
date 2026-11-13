@@ -1,0 +1,690 @@
+<title>Checkmarch Terrain Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  --bg: #e9ece6; --panel: #f8f9f5; --panel-2: #eff1ea; --fg: #1d2420; --muted: #5d685f; --line: #cfd5cb;
+  --accent: #2c6a58; --accent-fg: #f4fbf7; --accent-soft: rgba(44,106,88,.14); --danger: #c42f39;
+  --sq-light: #efe2c4; --sq-dark: #a8784d; --coord-light: #a8784d; --coord-dark: #efe2c4;
+  --zone: rgba(44,106,88,.16); --move: rgba(44,106,88,.55); --lost: rgba(196,47,57,.55); --sel: rgba(246,200,64,.55);
+  --p-fill: #fbf8f0; --p-ink: #2b2118; --e-fill: #2a1d24; --e-halo: rgba(255,248,235,.55);
+  --terr-rock: #9a958a; --terr-rock-hi: #c3beb1; --terr-rock-lo: #6f6a60; --terr-rock-edge: rgba(45,38,28,.35);
+  --terr-water: #5f9fbf; --terr-water-hi: rgba(238,248,252,.85); --terr-water-lo: #3f7f9f;
+  --terr-shadow: rgba(40,25,10,.22); --terr-bed: rgba(120,95,60,.10);
+  --shadow: 0 1px 2px rgba(30,30,20,.08), 0 8px 24px rgba(30,40,30,.10);
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --chess: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", "Noto Sans Symbols 2", "Arial Unicode MS", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161a; --panel: #192026; --panel-2: #1f272e; --fg: #e3e8ec; --muted: #8f9ca6; --line: #2b353d;
+  --accent: #74c7a9; --accent-fg: #0d1d17; --accent-soft: rgba(116,199,169,.14); --danger: #ff5c63;
+  --sq-light: #9eabb9; --sq-dark: #4c5a69; --coord-light: #4c5a69; --coord-dark: #b6c2ce;
+  --zone: rgba(116,199,169,.20); --move: rgba(116,199,169,.70); --lost: rgba(255,92,99,.65); --sel: rgba(255,214,102,.50);
+  --p-fill: #f6f2e8; --p-ink: #191c20; --e-fill: #2b1f33; --e-halo: rgba(236,226,255,.85);
+  --terr-rock: #7c8591; --terr-rock-hi: #a5aeb9; --terr-rock-lo: #535b66; --terr-rock-edge: rgba(0,0,0,.45);
+  --terr-water: #3d7393; --terr-water-hi: rgba(200,228,245,.70); --terr-water-lo: #2a5470;
+  --terr-shadow: rgba(0,0,0,.38); --terr-bed: rgba(10,15,20,.18);
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #11161a; --panel: #192026; --panel-2: #1f272e; --fg: #e3e8ec; --muted: #8f9ca6; --line: #2b353d;
+  --accent: #74c7a9; --accent-fg: #0d1d17; --accent-soft: rgba(116,199,169,.14); --danger: #ff5c63;
+  --sq-light: #9eabb9; --sq-dark: #4c5a69; --coord-light: #4c5a69; --coord-dark: #b6c2ce;
+  --zone: rgba(116,199,169,.20); --move: rgba(116,199,169,.70); --lost: rgba(255,92,99,.65); --sel: rgba(255,214,102,.50);
+  --p-fill: #f6f2e8; --p-ink: #191c20; --e-fill: #2b1f33; --e-halo: rgba(236,226,255,.85);
+  --terr-rock: #7c8591; --terr-rock-hi: #a5aeb9; --terr-rock-lo: #535b66; --terr-rock-edge: rgba(0,0,0,.45);
+  --terr-water: #3d7393; --terr-water-hi: rgba(200,228,245,.70); --terr-water-lo: #2a5470;
+  --terr-shadow: rgba(0,0,0,.38); --terr-bed: rgba(10,15,20,.18);
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px }
+main { max-width: 560px; margin: 0 auto; display: grid; gap: 12px }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px }
+h1 { font: 600 22px/1.2 var(--display); margin: 0 }
+.sub { color: var(--muted); font-size: 13px; margin: 2px 0 0 }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: var(--shadow) }
+.boardwrap { width: min(92vw, 420px, 100%); margin: 0 auto }
+canvas#board { display: block; width: 100%; aspect-ratio: 1; border-radius: 10px; touch-action: manipulation; cursor: pointer; box-shadow: var(--shadow) }
+.status { margin: 10px 2px 0; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 2.9em }
+.status b { color: var(--fg); font-weight: 600 }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px }
+.full { grid-column: 1 / -1 }
+.f { display: grid; gap: 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em }
+input[type=number] { min-height: 44px; width: 100%; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; padding: 0 10px; font-variant-numeric: tabular-nums }
+.row { display: flex; gap: 8px; align-items: center }
+.row input { flex: 1; min-width: 0 }
+input[type=range] { width: 100%; accent-color: var(--accent); min-height: 44px }
+.tierv { font: 600 16px var(--body); color: var(--fg); font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right }
+button { min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); font: inherit; padding: 0 12px; cursor: pointer }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.f + .seg, .f + .row { margin-top: 4px }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel-2) }
+.seg button { flex: 1; border: 0; border-radius: 0; min-width: 0; padding: 0 6px; background: transparent }
+.seg button + button { border-left: 1px solid var(--line) }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg) }
+.seg.pieces button { font: 26px/1 var(--chess) }
+.theme { flex: 0 0 auto }
+.rules { font-size: 13.5px; color: var(--muted); margin: 0; padding-left: 18px }
+.rules li { margin: 3px 0 }
+.rules b { color: var(--fg) }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); margin-top: 8px }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+.sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block }
+</style>
+<main>
+  <header>
+    <div>
+      <h1>Battle terrain</h1>
+      <p class="sub">Rock and water squares no piece may enter. Tap a square to probe moves.</p>
+    </div>
+    <button class="theme" id="theme" aria-label="Switch colour theme">Auto</button>
+  </header>
+
+  <section class="panel">
+    <div class="boardwrap"><canvas id="board" aria-label="Battle board with terrain. Tap a square to place the selected piece and see its moves."></canvas></div>
+    <p class="status" id="status" aria-live="polite"></p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--move)"></i>reachable</span>
+      <span><i class="sw" style="background:var(--lost)"></i>cut off by terrain</span>
+      <span><i class="sw" style="background:var(--zone);border:1px solid var(--line)"></i>deployment ranks (always clear)</span>
+    </div>
+  </section>
+
+  <section class="panel grid">
+    <div class="full">
+      <label class="f" id="pieceLbl">Probe piece</label>
+      <div class="row">
+        <div class="seg pieces" id="pieces" role="group" aria-labelledby="pieceLbl" style="flex:1"></div>
+        <div class="seg" id="color" role="group" aria-label="Piece colour" style="flex:0 0 96px"></div>
+      </div>
+    </div>
+    <label class="f">Seed
+      <span class="row"><input type="number" id="seed" inputmode="numeric" value="1"><button id="reroll">Reroll</button></span>
+    </label>
+    <label class="f">Node id
+      <input type="number" id="node" inputmode="numeric" value="7" min="0">
+    </label>
+    <div class="full">
+      <label class="f" for="tier">Tier</label>
+      <div class="row"><input type="range" id="tier" min="1" max="30" value="12"><span class="tierv" id="tierv">12</span></div>
+    </div>
+    <div class="full">
+      <span class="f" id="biomeLbl">Biome</span>
+      <div class="seg" id="biome" role="group" aria-labelledby="biomeLbl"></div>
+    </div>
+    <div class="full">
+      <span class="f" id="typeLbl">Node type</span>
+      <div class="seg" id="type" role="group" aria-labelledby="typeLbl"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <ul class="rules">
+      <li><b>Walls.</b> Rock and water stop bishops, rooks and queens before them. Nothing can land on them, so nothing can be captured there.</li>
+      <li><b>Knights leap.</b> A knight's jump passes over terrain; only a blocked landing square is lost.</li>
+      <li><b>Pawns</b> cannot push into terrain; a double step needs both squares open.</li>
+      <li><b>Fair ground.</b> No terrain below tier 3, then 2 to 6 squares (at most 3 at a citadel or keep), never on either side's two home ranks, never all four centre squares, and every open square stays reachable.</li>
+    </ul>
+  </section>
+</main>
+<script>
+// Checkmarch battle terrain: impassable squares (rock, water) on the battle board.
+// Pure ES module, no DOM access, no imports. Inline-friendly for build.mjs: every top-level
+// name is unique to this module (prefixed terr*/TERR_* or terrain*), and the only exports are
+// `export function` / `export const`, which build.mjs's toScript() strips.
+//
+// Square indexing matches engine.mjs: sq = rank * N + file, rank 0 = white's back rank.
+//
+// RULES (see TERRAIN-API.md for the engine patch):
+//   * A blocked square is a wall. No piece may stand on it, land on it, or capture onto it.
+//   * Sliders (bishop, rook, queen) stop BEFORE a wall; their ray ends there.
+//   * Kings move one square and simply cannot step onto a wall.
+//   * Pawns cannot push onto a wall; a double push is blocked if either square is a wall.
+//     (Pawn captures never land on a wall because no piece can stand on one.)
+//   * KNIGHTS LEAP OVER TERRAIN. A knight's jump is not a path, it is a leap (the chess-natural
+//     reading: a knight is never blocked by what stands between), so walls only remove a knight's
+//     landing square, never its route.
+//   * Terrain is static for a whole battle and never changes the side to move or the rules of check;
+//     attacks are computed with the same wall-truncated rays, so a wall also shields from checks.
+
+// ---------- tuning ----------
+const TERRAIN_MIN_TIER = 3;     // tier < 3: never any terrain
+const TERRAIN_MIN = 2;          // tier >= 3: at least this many blocked squares...
+const TERRAIN_MAX = 6;          // ...and at most this many
+const TERRAIN_FORT_MAX = 3;     // citadel / keep battles: at most this many
+const TERRAIN_DEPLOY_RANKS = 2; // ranks on each side that always stay clear
+const TERRAIN_FORT_TYPES = ['citadel', 'keep'];
+
+// waterShare: chance a new cluster is water; grow: chance to extend the current cluster rather than
+// start a new one; maxCluster: largest cluster; bias: added to the tier curve before rounding.
+const TERRAIN_BIOMES = {
+  plains:   { label: 'Plains',   waterShare: 0.35, grow: 0.45, maxCluster: 2, bias: -0.35 },
+  highland: { label: 'Highland', waterShare: 0.10, grow: 0.55, maxCluster: 3, bias: 0.45 },
+  marsh:    { label: 'Marsh',    waterShare: 0.80, grow: 0.70, maxCluster: 3, bias: 0.15 },
+};
+const TERRAIN_BIOME_KEYS = ['plains', 'highland', 'marsh'];
+
+// ---------- rng (FNV-1a + murmur finalizer -> mulberry32), self-contained ----------
+function terrHash(str) {
+  const s = String(str);
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15;
+  return h >>> 0;
+}
+function terrMulberry32(a) {
+  a = a >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ---------- counts and zones ----------
+/** Target number of blocked squares for a node (before feasibility). Deterministic given rng. */
+function terrainCount(tier, type, biome, rng) {
+  tier = tier | 0;
+  if (tier < TERRAIN_MIN_TIER) return 0;
+  const b = TERRAIN_BIOMES[biome] || TERRAIN_BIOMES.plains;
+  // gentle curve: ~2 at tier 3, ~4 at tier 16, 6 by the high 20s; +/- a little noise per node
+  const base = 2 + (tier - TERRAIN_MIN_TIER) / 6.5 + b.bias + (rng ? rng() * 0.9 - 0.3 : 0);
+  let n = Math.max(TERRAIN_MIN, Math.min(TERRAIN_MAX, Math.floor(base)));
+  if (TERRAIN_FORT_TYPES.includes(type)) n = Math.min(n, TERRAIN_FORT_MAX);
+  return n;
+}
+/** True if terrain may ever be placed on rank r of an N board (deployment zones stay clear). */
+function terrainRankAllowed(r, N = 8) { return r >= TERRAIN_DEPLOY_RANKS && r < N - TERRAIN_DEPLOY_RANKS; }
+/** The central squares (2x2 on even boards, the single centre on odd boards). */
+function terrainCenter(N = 8) {
+  if (N % 2) { const c = (N - 1) / 2; return [c * N + c]; }
+  const a = N / 2 - 1, b = N / 2;
+  return [a * N + a, a * N + b, b * N + a, b * N + b];
+}
+
+// ---------- connectivity (king-move adjacency over open squares) ----------
+/** mask: Uint8Array(N*N), nonzero = blocked. Returns true if every open square is reachable. */
+function terrainConnected(mask, N = 8) {
+  const total = N * N;
+  let start = -1, open = 0;
+  for (let i = 0; i < total; i++) if (!mask[i]) { open++; if (start < 0) start = i; }
+  if (open === 0) return true;
+  const seen = new Uint8Array(total), stack = [start];
+  seen[start] = 1;
+  let n = 0;
+  while (stack.length) {
+    const s = stack.pop(); n++;
+    const r = (s / N) | 0, f = s % N;
+    for (let dr = -1; dr <= 1; dr++) for (let df = -1; df <= 1; df++) {
+      if (!dr && !df) continue;
+      const rr = r + dr, ff = f + df;
+      if (rr < 0 || rr >= N || ff < 0 || ff >= N) continue;
+      const t = rr * N + ff;
+      if (!mask[t] && !seen[t]) { seen[t] = 1; stack.push(t); }
+    }
+  }
+  return n === open;
+}
+
+// ---------- generation ----------
+/**
+ * generateTerrain(seed, nodeId, boardN = 8, biome = 'plains', opts = {})
+ *   opts.tier  : node tier (default 1 -> no terrain)
+ *   opts.type  : node type ('garrison' | 'mine' | 'citadel' | 'keep' | 'raid' ...); citadel/keep cap 3
+ *   opts.avoid : extra squares that must stay open (e.g. the enemy formation's squares, some of
+ *                which sit on black's ranks 6 and 5, outside the guaranteed-clear zone)
+ * Returns a plain JSON-safe object:
+ *   { v: 1, n, biome, tier, type, blocked: [sorted square indices], kind: { [sq]: 'rock'|'water' } }
+ * Deterministic: same (seed, nodeId, boardN, biome, opts) -> same terrain.
+ */
+function generateTerrain(seed, nodeId, boardN = 8, biome = 'plains', opts = {}) {
+  const N = Math.max(1, boardN | 0);
+  if (!TERRAIN_BIOMES[biome]) biome = 'plains';
+  const B = TERRAIN_BIOMES[biome];
+  const tier = opts.tier == null ? 1 : opts.tier | 0;
+  const type = opts.type || 'garrison';
+  const out = { v: 1, n: N, biome, tier, type, blocked: [], kind: {} };
+  const rng = terrMulberry32(terrHash(seed + '|' + nodeId + '|' + N + '|' + biome));
+  const target = terrainCount(tier, type, biome, rng);
+  if (!target) return out;
+
+  const total = N * N, mask = new Uint8Array(total), keepOpen = new Uint8Array(total);
+  for (const s of opts.avoid || []) if (s >= 0 && s < total) keepOpen[s] = 1;
+  const center = terrainCenter(N);
+  const allowed = [];
+  for (let s = 0; s < total; s++) if (terrainRankAllowed((s / N) | 0, N) && !keepOpen[s]) allowed.push(s);
+
+  const ok = (s) => {
+    if (s < 0 || s >= total || mask[s] || keepOpen[s] || !terrainRankAllowed((s / N) | 0, N)) return false;
+    mask[s] = 1;
+    let good = !center.every(c => mask[c]) && terrainConnected(mask, N);
+    mask[s] = 0;
+    return good;
+  };
+  const neigh = (s, diag) => {
+    const r = (s / N) | 0, f = s % N, res = [];
+    for (let dr = -1; dr <= 1; dr++) for (let df = -1; df <= 1; df++) {
+      if (!dr && !df) continue;
+      if (!diag && dr && df) continue;
+      const rr = r + dr, ff = f + df;
+      if (rr >= 0 && rr < N && ff >= 0 && ff < N) res.push(rr * N + ff);
+    }
+    return res;
+  };
+  const place = (s, k) => { mask[s] = k; out.blocked.push(s); out.kind[s] = k === 2 ? 'water' : 'rock'; };
+
+  // clustered growth: water spreads orthogonally (ponds, streams), rock also diagonally (outcrops)
+  let cluster = null, kind = 1, placed = 0;
+  for (let tries = 0; placed < target && tries < 300; tries++) {
+    const extend = cluster && cluster.length < B.maxCluster && rng() < B.grow;
+    let cand;
+    if (extend) {
+      const pool = [];
+      for (const c of cluster) for (const t of neigh(c, kind === 1)) if (ok(t) && !pool.includes(t)) pool.push(t);
+      if (!pool.length) { cluster = null; continue; }
+      cand = pool[(rng() * pool.length) | 0];
+    } else {
+      cand = allowed[(rng() * allowed.length) | 0];
+      if (!ok(cand)) continue;
+      // a fresh cluster does not touch an existing one of the other kind (keeps glyphs readable)
+      kind = rng() < B.waterShare ? 2 : 1;
+      if (neigh(cand, true).some(t => mask[t] && mask[t] !== kind)) kind = 3 - kind;
+      cluster = [];
+    }
+    place(cand, kind); cluster.push(cand); placed++;
+  }
+  // fallback sweep (enforces the minimum even if the random walk was unlucky)
+  if (placed < target) {
+    const order = allowed.slice();
+    for (let i = order.length - 1; i > 0; i--) { const j = (rng() * (i + 1)) | 0; [order[i], order[j]] = [order[j], order[i]]; }
+    for (const s of order) { if (placed >= target) break; if (ok(s)) { place(s, 1); placed++; } }
+  }
+  out.blocked.sort((a, b) => a - b);
+  const kinds = {};
+  for (const s of out.blocked) kinds[s] = out.kind[s];
+  out.kind = kinds;
+  return out;
+}
+
+// ---------- adapters ----------
+const terrMaskCache = new WeakMap();
+/** Uint8Array(N*N): 0 open, 1 rock, 2 water. Cached per terrain object. null/undefined -> all open. */
+function terrainMask(terrain, N) {
+  N = N || (terrain && terrain.n) || 8;
+  if (!terrain) return new Uint8Array(N * N);
+  let m = terrMaskCache.get(terrain);
+  if (m && m.length === N * N) return m;
+  m = new Uint8Array(N * N);
+  for (const s of terrain.blocked || []) if (s >= 0 && s < N * N) m[s] = terrain.kind && terrain.kind[s] === 'water' ? 2 : 1;
+  terrMaskCache.set(terrain, m);
+  return m;
+}
+/** Live Set view of the blocked squares (the canonical serialized form is the sorted array). */
+function terrainBlockedSet(terrain) { return new Set(terrain ? terrain.blocked : []); }
+function isBlocked(terrain, sq) { return !!terrain && terrainMask(terrain)[sq] > 0; }
+function terrainKind(terrain, sq) { return terrain && terrain.kind ? terrain.kind[sq] || null : null; }
+/** Validate a terrain object (e.g. from a save) against every guarantee. Returns [] or a list of problems. */
+function terrainProblems(terrain, opts = {}) {
+  const errs = [], N = terrain.n, tier = terrain.tier, type = terrain.type, bl = terrain.blocked;
+  const max = tier < TERRAIN_MIN_TIER ? 0 : TERRAIN_FORT_TYPES.includes(type) ? TERRAIN_FORT_MAX : TERRAIN_MAX;
+  const min = tier < TERRAIN_MIN_TIER ? 0 : Math.min(TERRAIN_MIN, max);
+  if (bl.length < min || bl.length > max) errs.push(`count ${bl.length} outside [${min},${max}]`);
+  for (let i = 1; i < bl.length; i++) if (bl[i] <= bl[i - 1]) errs.push('blocked not strictly sorted');
+  for (const s of bl) {
+    if (!terrainRankAllowed((s / N) | 0, N)) errs.push(`square ${s} in a deployment rank`);
+    if (terrain.kind[s] !== 'rock' && terrain.kind[s] !== 'water') errs.push(`square ${s} has no kind`);
+  }
+  if (Object.keys(terrain.kind).length !== bl.length) errs.push('kind map size mismatch');
+  for (const s of opts.avoid || []) if (bl.includes(s)) errs.push(`avoid square ${s} blocked`);
+  const m = new Uint8Array(N * N); for (const s of bl) m[s] = 1;
+  if (terrainCenter(N).every(c => m[c])) errs.push('all central squares blocked');
+  if (!terrainConnected(m, N)) errs.push('open squares not connected');
+  return errs;
+}
+
+// ---------- geometry tables in engine.mjs format ----------
+// Engine direction order: [dr, df] = N, S, E, W (rook, d < 4), then NE, NW, SE, SW (bishop, d >= 4).
+const TERR_DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+const TERR_KNIGHT = [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]];
+/**
+ * Wall-aware move tables, same shape and order as engine.mjs's KN / KG / RAYS / PAWN_FROM, plus WALL.
+ * With terrain = null this reproduces the engine's own tables exactly.
+ *   KN[sq]  knight targets, landing on walls removed (knights leap over terrain)
+ *   KG[sq]  king targets, walls removed
+ *   RAYS[sq][d]  slider rays, each truncated before its first wall
+ *   PAWN_FROM[c][sq]  squares from which a pawn of color c attacks sq (wall origins removed)
+ *   WALL    Uint8Array(N*N), 1 = blocked (used for pawn pushes)
+ * A wall square's own entries are empty arrays (nothing can stand there).
+ */
+function terrainGeometry(terrain, N = 8) {
+  const W = new Uint8Array(N * N);
+  if (terrain) for (const s of terrain.blocked) if (s >= 0 && s < N * N) W[s] = 1;
+  const okSq = (r, f) => r >= 0 && r < N && f >= 0 && f < N && !W[r * N + f];
+  const KN = [], KG = [], RAYS = [], PAWN_FROM = [[], []];
+  for (let sq = 0; sq < N * N; sq++) {
+    const r = (sq / N) | 0, f = sq % N;
+    if (W[sq]) { KN[sq] = []; KG[sq] = []; RAYS[sq] = TERR_DIRS.map(() => []); PAWN_FROM[0][sq] = []; PAWN_FROM[1][sq] = []; continue; }
+    KN[sq] = TERR_KNIGHT.filter(([a, b]) => okSq(r + a, f + b)).map(([a, b]) => (r + a) * N + f + b);
+    KG[sq] = TERR_DIRS.filter(([a, b]) => okSq(r + a, f + b)).map(([a, b]) => (r + a) * N + f + b);
+    RAYS[sq] = TERR_DIRS.map(([a, b]) => { const o = []; let rr = r + a, ff = f + b; while (okSq(rr, ff)) { o.push(rr * N + ff); rr += a; ff += b; } return o; });
+    PAWN_FROM[0][sq] = [-1, 1].filter(d => okSq(r - 1, f + d)).map(d => (r - 1) * N + f + d);
+    PAWN_FROM[1][sq] = [-1, 1].filter(d => okSq(r + 1, f + d)).map(d => (r + 1) * N + f + d);
+  }
+  return { N, WALL: W, KN, KG, RAYS, PAWN_FROM };
+}
+
+// ---------- movement probe (single piece; used by the demo and the tests) ----------
+/**
+ * Pseudo-legal target squares for one piece standing on `sq`, honoring terrain.
+ *   type: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K'; color: 0 white (moves up), 1 black
+ *   occ (optional): Map/obj sq -> 0|1 color of other pieces on the board (blockers / captures)
+ * Returns { moves: [sq...], captures: [sq...], pawnAttacks: [sq...] } (pawnAttacks = diagonal squares a
+ * pawn threatens, whether or not something stands there). Returns empty lists if sq itself is blocked.
+ */
+function terrainProbe(terrain, sq, type, color = 0, occ = null, N) {
+  N = N || (terrain && terrain.n) || 8;
+  const g = terrainGeometry(terrain, N), W = g.WALL;
+  const who = (s) => occ == null ? null : occ instanceof Map ? (occ.has(s) ? occ.get(s) : null) : (s in occ ? occ[s] : null);
+  const res = { moves: [], captures: [], pawnAttacks: [] };
+  if (sq < 0 || sq >= N * N || W[sq]) return res;
+  const add = (t) => { const c = who(t); if (c == null) res.moves.push(t); else if (c !== color) res.captures.push(t); return c == null; };
+  if (type === 'N' || type === 'K') { for (const t of (type === 'N' ? g.KN : g.KG)[sq]) add(t); }
+  else if (type === 'B' || type === 'R' || type === 'Q') {
+    const d0 = type === 'B' ? 4 : 0, d1 = type === 'R' ? 4 : 8;
+    for (let d = d0; d < d1; d++) for (const t of g.RAYS[sq][d]) if (!add(t)) break;
+  } else if (type === 'P') {
+    const dir = color === 0 ? N : -N, r = (sq / N) | 0, f = sq % N, startR = color === 0 ? 1 : N - 2, to = sq + dir;
+    if (to >= 0 && to < N * N) {
+      if (!W[to] && who(to) == null) {
+        res.moves.push(to);
+        const t2 = to + dir;
+        if (r === startR && t2 >= 0 && t2 < N * N && !W[t2] && who(t2) == null) res.moves.push(t2);
+      }
+      for (const df of [-1, 1]) {
+        const ff = f + df; if (ff < 0 || ff >= N) continue;
+        const c = to + df; if (W[c]) continue;
+        res.pawnAttacks.push(c);
+        const o = who(c); if (o != null && o !== color) res.captures.push(c);
+      }
+    }
+  }
+  return res;
+}
+
+// ---------- rendering ----------
+const TERRAIN_PALETTE_KEYS = ['rock', 'rockHi', 'rockLo', 'rockEdge', 'water', 'waterHi', 'waterLo', 'shadow', 'bed'];
+const TERRAIN_PALETTES = {
+  light: {
+    rock: '#9a958a', rockHi: '#c3beb1', rockLo: '#6f6a60', rockEdge: 'rgba(45,38,28,0.35)',
+    water: '#5f9fbf', waterHi: 'rgba(238,248,252,0.85)', waterLo: '#3f7f9f',
+    shadow: 'rgba(40,25,10,0.22)', bed: 'rgba(120,95,60,0.10)',
+  },
+  dark: {
+    rock: '#7c8591', rockHi: '#a5aeb9', rockLo: '#535b66', rockEdge: 'rgba(0,0,0,0.45)',
+    water: '#3d7393', waterHi: 'rgba(200,228,245,0.70)', waterLo: '#2a5470',
+    shadow: 'rgba(0,0,0,0.38)', bed: 'rgba(10,15,20,0.18)',
+  },
+};
+/** Fill any missing palette key from the built-in light/dark palette for `theme`. */
+function terrainPalette(palette, theme = 'light') {
+  const base = TERRAIN_PALETTES[theme === 'dark' ? 'dark' : 'light'], o = {};
+  for (const k of TERRAIN_PALETTE_KEYS) o[k] = (palette && palette[k]) || base[k];
+  return o;
+}
+/** Read `--terr-<kebab-key>` custom properties from a computed style (getComputedStyle result). */
+function terrainPaletteFromStyle(cs, theme = 'light') {
+  const p = {};
+  for (const k of TERRAIN_PALETTE_KEYS) { const v = cs.getPropertyValue('--terr-' + k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())).trim(); if (v) p[k] = v; }
+  return terrainPalette(p, theme);
+}
+
+// Shape geometry in unit-cell coordinates (0..1), deterministic per square, shared by canvas + SVG.
+function terrainRockShape(sq) {
+  const rnd = terrMulberry32(terrHash('rock|' + sq));
+  const cx = 0.5 + (rnd() - 0.5) * 0.06, cy = 0.54, n = 7, pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.PI + (i / (n - 1)) * Math.PI;             // upper half arc, left -> right
+    const rx = 0.34 + rnd() * 0.05, ry = 0.30 + rnd() * 0.08;
+    pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+  }
+  pts.push([cx + 0.36, cy + 0.16], [cx - 0.36, cy + 0.16]); // flat base
+  const hi = [pts[1], pts[2], pts[3], [cx + 0.02, cy - 0.02], [cx - 0.2, cy + 0.04]];
+  const crack = [[cx + 0.08, cy - 0.22], [cx + 0.03, cy - 0.06], [cx + 0.12, cy + 0.06]];
+  const pebble = [cx + (rnd() < 0.5 ? -0.3 : 0.3), cy + 0.2, 0.06];
+  return { pts, hi, crack, pebble, shadow: [cx, cy + 0.17, 0.4, 0.09] };
+}
+function terrainWaterWaves(sq) {
+  const rnd = terrMulberry32(terrHash('water|' + sq)), off = (rnd() - 0.5) * 0.12;
+  return [[0.24 + off, 0.40], [0.46 - off, 0.62]]; // left ends of two wave strokes (width 0.3)
+}
+
+function terrCellXY(sq, N, cell, flip, x0, y0) {
+  const r = (sq / N) | 0, f = sq % N;
+  return flip ? [x0 + (N - 1 - f) * cell, y0 + r * cell] : [x0 + f * cell, y0 + (N - 1 - r) * cell];
+}
+
+/**
+ * drawTerrain(ctx, terrain, cellPx, palette, theme = 'light', opts = {})
+ *   Draws every blocked square onto a 2D canvas context, flat vector style.
+ *   Call after the squares and before highlights/pieces. palette may be partial; missing keys come
+ *   from TERRAIN_PALETTES[theme]. opts: { x0 = 0, y0 = 0, flip = false (black at the bottom) }.
+ *   Water cells that touch orthogonally are bridged so ponds and streams read as one body.
+ */
+function drawTerrain(ctx, terrain, cellPx, palette, theme = 'light', opts = {}) {
+  if (!terrain || !terrain.blocked.length) return;
+  const pal = terrainPalette(palette, theme), N = terrain.n, c = cellPx;
+  const x0 = opts.x0 || 0, y0 = opts.y0 || 0, flip = !!opts.flip, m = terrainMask(terrain, N);
+  const waters = terrain.blocked.filter(s => m[s] === 2), rocks = terrain.blocked.filter(s => m[s] === 1);
+  ctx.save();
+  // ---- water: bodies first (with bridges), then rims and waves
+  const pad = c * 0.07, rad = c * 0.22;
+  const body = (inset) => {
+    ctx.beginPath();
+    for (const s of waters) {
+      const [x, y] = terrCellXY(s, N, c, flip, x0, y0);
+      terrRoundRect(ctx, x + pad - inset, y + pad - inset, c - 2 * pad + 2 * inset, c - 2 * pad + 2 * inset, rad);
+      const r = (s / N) | 0, f = s % N;
+      // bridge to the east / north neighbour (screen direction depends on flip)
+      if (f + 1 < N && m[s + 1] === 2) { const [x2] = terrCellXY(s + 1, N, c, flip, x0, y0); const xa = Math.min(x, x2) + c / 2; ctx.rect(xa, y + pad - inset, c, c - 2 * pad + 2 * inset); }
+      if (r + 1 < N && m[s + N] === 2) { const [, y2] = terrCellXY(s + N, N, c, flip, x0, y0); const ya = Math.min(y, y2) + c / 2; ctx.rect(x + pad - inset, ya, c - 2 * pad + 2 * inset, c); }
+    }
+    ctx.fill();
+  };
+  if (waters.length) {
+    ctx.fillStyle = pal.waterLo; body(c * 0.035);
+    ctx.fillStyle = pal.water; body(0);
+    ctx.strokeStyle = pal.waterHi; ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1.2, c * 0.045);
+    for (const s of waters) {
+      const [x, y] = terrCellXY(s, N, c, flip, x0, y0);
+      for (const [wx, wy] of terrainWaterWaves(s)) {
+        ctx.beginPath();
+        ctx.moveTo(x + wx * c, y + wy * c);
+        ctx.quadraticCurveTo(x + (wx + 0.075) * c, y + (wy - 0.06) * c, x + (wx + 0.15) * c, y + wy * c);
+        ctx.quadraticCurveTo(x + (wx + 0.225) * c, y + (wy + 0.06) * c, x + (wx + 0.3) * c, y + wy * c);
+        ctx.stroke();
+      }
+    }
+  }
+  // ---- rock: soft ground bed + shadow, boulder, facet, crack, pebble
+  for (const s of rocks) {
+    const [x, y] = terrCellXY(s, N, c, flip, x0, y0), sh = terrainRockShape(s);
+    const P = ([u, v]) => [x + u * c, y + v * c];
+    ctx.fillStyle = pal.bed; ctx.beginPath(); terrRoundRect(ctx, x + pad, y + pad, c - 2 * pad, c - 2 * pad, rad); ctx.fill();
+    ctx.fillStyle = pal.shadow; ctx.beginPath(); ctx.ellipse(x + sh.shadow[0] * c, y + sh.shadow[1] * c, sh.shadow[2] * c, sh.shadow[3] * c, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = pal.rock; ctx.strokeStyle = pal.rockEdge; ctx.lineWidth = Math.max(1, c * 0.025); ctx.lineJoin = 'round';
+    terrPoly(ctx, sh.pts.map(P)); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = pal.rockHi; terrPoly(ctx, sh.hi.map(P)); ctx.fill();
+    ctx.strokeStyle = pal.rockLo; ctx.lineWidth = Math.max(1, c * 0.03); ctx.lineCap = 'round';
+    ctx.beginPath(); sh.crack.map(P).forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.stroke();
+    ctx.fillStyle = pal.rockLo; ctx.beginPath(); ctx.arc(x + sh.pebble[0] * c, y + sh.pebble[1] * c, sh.pebble[2] * c, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function terrPoly(ctx, pts) { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); }
+function terrRoundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/**
+ * terrainSquareSVG(terrain, sq, palette, theme) -> SVG markup string (viewBox 0 0 100 100) for one
+ * blocked square, or '' if open. For the game's DOM board (.sq divs): drop it inside the square,
+ * absolutely positioned, pointer-events:none. Same shapes as drawTerrain (no water bridging).
+ */
+function terrainSquareSVG(terrain, sq, palette, theme = 'light') {
+  const k = terrainKind(terrain, sq); if (!k) return '';
+  const pal = terrainPalette(palette, theme), u = (v) => (v * 100).toFixed(1);
+  const pts = (a) => a.map(([x, y]) => u(x) + ',' + u(y)).join(' ');
+  let g;
+  if (k === 'water') {
+    const waves = terrainWaterWaves(sq).map(([x, y]) => `<path d="M${u(x)} ${u(y)}q7.5 -6 15 0t15 0" fill="none" stroke="${pal.waterHi}" stroke-width="4.5" stroke-linecap="round"/>`).join('');
+    g = `<rect x="3.5" y="3.5" width="93" height="93" rx="22" fill="${pal.waterLo}"/><rect x="7" y="7" width="86" height="86" rx="22" fill="${pal.water}"/>${waves}`;
+  } else {
+    const sh = terrainRockShape(sq);
+    g = `<rect x="7" y="7" width="86" height="86" rx="22" fill="${pal.bed}"/>`
+      + `<ellipse cx="${u(sh.shadow[0])}" cy="${u(sh.shadow[1])}" rx="${u(sh.shadow[2])}" ry="${u(sh.shadow[3])}" fill="${pal.shadow}"/>`
+      + `<polygon points="${pts(sh.pts)}" fill="${pal.rock}" stroke="${pal.rockEdge}" stroke-width="2.5" stroke-linejoin="round"/>`
+      + `<polygon points="${pts(sh.hi)}" fill="${pal.rockHi}"/>`
+      + `<polyline points="${pts(sh.crack)}" fill="none" stroke="${pal.rockLo}" stroke-width="3" stroke-linecap="round"/>`
+      + `<circle cx="${u(sh.pebble[0])}" cy="${u(sh.pebble[1])}" r="${u(sh.pebble[2])}" fill="${pal.rockLo}"/>`;
+  }
+  return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${g}</svg>`;
+}
+
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const N = 8;
+  const PIECES = [['K', '♔', '♚'], ['Q', '♕', '♛'], ['R', '♖', '♜'], ['B', '♗', '♝'], ['N', '♘', '♞'], ['P', '♙', '♟']];
+  const NAMES = { K: 'King', Q: 'Queen', R: 'Rook', B: 'Bishop', N: 'Knight', P: 'Pawn' };
+  const st = { seed: 1, node: 7, tier: 12, biome: 'highland', type: 'garrison', piece: 'R', color: 0, at: -1, theme: 'auto', terrain: null };
+  try { const s = JSON.parse(localStorage.getItem('checkmarch-terrain-demo') || 'null'); if (s) Object.assign(st, s, { terrain: null, at: -1 }); } catch (e) {}
+  const save = () => { try { localStorage.setItem('checkmarch-terrain-demo', JSON.stringify({ seed: st.seed, node: st.node, tier: st.tier, biome: st.biome, type: st.type, piece: st.piece, color: st.color, theme: st.theme })); } catch (e) {} };
+  const sqName = (s) => 'abcdefgh'[s % N] + (((s / N) | 0) + 1);
+
+  function seg(el, items, key, onPick) {
+    el.innerHTML = '';
+    for (const [val, label, aria] of items) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = label; b.dataset.v = val;
+      if (aria) b.setAttribute('aria-label', aria);
+      b.addEventListener('click', () => { st[key] = val; onPick(); sync(); });
+      el.appendChild(b);
+    }
+  }
+  function sync() {
+    for (const [id, key] of [['pieces', 'piece'], ['color', 'color'], ['biome', 'biome'], ['type', 'type']])
+      for (const b of $(id).children) b.setAttribute('aria-pressed', String(b.dataset.v === String(st[key])));
+    for (const b of $('pieces').children) { const p = PIECES.find(x => x[0] === b.dataset.v); b.textContent = (st.color ? p[2] : p[1]) + '︎'; }
+    $('seed').value = st.seed; $('node').value = st.node; $('tier').value = st.tier; $('tierv').textContent = st.tier;
+    $('theme').textContent = st.theme === 'auto' ? 'Auto' : st.theme === 'light' ? 'Light' : 'Dark';
+    if (st.theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', st.theme);
+    save(); draw();
+  }
+  function regen() {
+    st.terrain = generateTerrain(st.seed, st.node, N, st.biome, { tier: st.tier, type: st.type });
+    if (st.at >= 0 && isBlocked(st.terrain, st.at)) st.at = -1;
+  }
+
+  seg($('pieces'), PIECES.map(p => [p[0], p[1], NAMES[p[0]]]), 'piece', () => {});
+  seg($('color'), [['0', 'White'], ['1', 'Black']], 'color', () => { st.color = +st.color; });
+  seg($('biome'), TERRAIN_BIOME_KEYS.map(k => [k, TERRAIN_BIOMES[k].label]), 'biome', regen);
+  seg($('type'), [['garrison', 'Garrison'], ['citadel', 'Citadel']], 'type', regen);
+  $('seed').addEventListener('input', () => { const v = parseInt($('seed').value, 10); if (Number.isFinite(v)) { st.seed = v; regen(); save(); draw(); } });
+  $('node').addEventListener('input', () => { const v = parseInt($('node').value, 10); if (Number.isFinite(v)) { st.node = v; regen(); save(); draw(); } });
+  $('tier').addEventListener('input', () => { st.tier = +$('tier').value; $('tierv').textContent = st.tier; regen(); save(); draw(); });
+  $('reroll').addEventListener('click', () => { st.seed = (Math.random() * 1e6) | 0; regen(); sync(); });
+  $('theme').addEventListener('click', () => { st.theme = st.theme === 'auto' ? 'light' : st.theme === 'light' ? 'dark' : 'auto'; sync(); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw); } catch (e) {}
+
+  const cv = $('board'), ctx = cv.getContext('2d');
+  function themeNow() {
+    const t = document.documentElement.getAttribute('data-theme');
+    if (t) return t;
+    try { return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; } catch (e) { return 'light'; }
+  }
+  function draw() {
+    const css = cv.getBoundingClientRect().width || 320, dpr = Math.min(3, window.devicePixelRatio || 1);
+    const px = Math.round(css * dpr);
+    if (cv.width !== px) { cv.width = px; cv.height = px; }
+    const c = px / N, cs = getComputedStyle(document.documentElement), v = (k) => cs.getPropertyValue(k).trim();
+    const theme = themeNow(), t = st.terrain;
+    ctx.clearRect(0, 0, px, px);
+    for (let r = 0; r < N; r++) for (let f = 0; f < N; f++) {
+      ctx.fillStyle = (r + f) % 2 ? v('--sq-light') : v('--sq-dark');
+      ctx.fillRect(f * c, (N - 1 - r) * c, c, c);
+      if (!terrainRankAllowed(r, N)) { ctx.fillStyle = v('--zone'); ctx.fillRect(f * c, (N - 1 - r) * c, c, c); }
+    }
+    // coordinates
+    ctx.font = `600 ${Math.round(c * 0.17)}px ${v('--body')}`;
+    ctx.textBaseline = 'top';
+    for (let i = 0; i < N; i++) {
+      ctx.fillStyle = (i % 2) ? v('--coord-light') : v('--coord-dark');
+      ctx.fillText(String(i + 1), c * 0.06, (N - 1 - i) * c + c * 0.05);
+      ctx.fillStyle = (i % 2) ? v('--coord-light') : v('--coord-dark');
+      ctx.fillText('abcdefgh'[i], i * c + c * 0.82, (N - 1) * c + c * 0.76);
+    }
+    drawTerrain(ctx, t, c, terrainPaletteFromStyle(cs, theme), theme);
+    const xy = (s) => [(s % N) * c, (N - 1 - ((s / N) | 0)) * c];
+    let probe = null, lost = [];
+    if (st.at >= 0) {
+      probe = terrainProbe(t, st.at, st.piece, st.color);
+      const free = terrainProbe(null, st.at, st.piece, st.color, null, N), have = new Set(probe.moves.concat(probe.pawnAttacks));
+      lost = free.moves.concat(free.pawnAttacks).filter(s => !have.has(s));
+      const [sx, sy] = xy(st.at);
+      ctx.fillStyle = v('--sel'); ctx.fillRect(sx, sy, c, c);
+      ctx.fillStyle = v('--move');
+      for (const s of probe.moves) { const [x, y] = xy(s); ctx.beginPath(); ctx.arc(x + c / 2, y + c / 2, c * 0.15, 0, Math.PI * 2); ctx.fill(); }
+      ctx.strokeStyle = v('--move'); ctx.lineWidth = c * 0.07;
+      for (const s of probe.pawnAttacks) { const [x, y] = xy(s); ctx.beginPath(); ctx.arc(x + c / 2, y + c / 2, c * 0.4, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.strokeStyle = v('--lost'); ctx.lineWidth = c * 0.055; ctx.lineCap = 'round';
+      for (const s of lost) {
+        if (isBlocked(t, s)) continue;
+        const [x, y] = xy(s), a = c * 0.13;
+        ctx.beginPath(); ctx.moveTo(x + c / 2 - a, y + c / 2 - a); ctx.lineTo(x + c / 2 + a, y + c / 2 + a);
+        ctx.moveTo(x + c / 2 + a, y + c / 2 - a); ctx.lineTo(x + c / 2 - a, y + c / 2 + a); ctx.stroke();
+      }
+      // piece glyph: filled body + outline ink (white) or dark body with halo (black)
+      const p = PIECES.find(x => x[0] === st.piece);
+      ctx.font = `${Math.round(c * 0.8)}px ${v('--chess')}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const gx = sx + c / 2, gy = sy + c * 0.54;
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = c * 0.08; ctx.shadowOffsetY = c * 0.03;
+      if (st.color === 0) { ctx.fillStyle = v('--p-fill'); ctx.fillText(p[2] + '︎', gx, gy); ctx.restore(); ctx.fillStyle = v('--p-ink'); ctx.fillText(p[1] + '︎', gx, gy); }
+      else { ctx.lineWidth = c * 0.06; ctx.strokeStyle = v('--e-halo'); ctx.strokeText(p[2] + '︎', gx, gy); ctx.restore(); ctx.fillStyle = v('--e-fill'); ctx.fillText(p[2] + '︎', gx, gy); }
+      ctx.textAlign = 'start';
+    }
+    // status
+    const rocks = t.blocked.filter(s => t.kind[s] === 'rock').length, water = t.blocked.length - rocks;
+    const mask = new Uint8Array(N * N); for (const s of t.blocked) mask[s] = 1;
+    const conn = terrainConnected(mask, N), probs = terrainProblems(t);
+    let html = `Tier <b>${t.tier}</b> ${TERRAIN_BIOMES[t.biome].label.toLowerCase()} ${t.type}: <b>${t.blocked.length}</b> blocked`
+      + (t.blocked.length ? ` (${rocks} rock, ${water} water)` : t.tier < TERRAIN_MIN_TIER ? ' (none below tier 3)' : '')
+      + `. Open ground ${conn ? 'fully connected' : 'SPLIT'}${probs.length ? '; ' + probs.join('; ') : ''}.`;
+    if (st.at >= 0 && probe) {
+      const n = probe.moves.length, cut = lost.filter(s => !isBlocked(t, s)).length;
+      html += `<br>${st.color ? 'Black' : 'White'} ${NAMES[st.piece].toLowerCase()} on <b>${sqName(st.at)}</b>: <b>${n}</b> move${n === 1 ? '' : 's'}`
+        + (st.piece === 'P' && probe.pawnAttacks.length ? `, attacks ${probe.pawnAttacks.map(sqName).join(' ')}` : '')
+        + (lost.length ? `; terrain takes away ${lost.length} (${cut} beyond walls).` : '; terrain takes nothing away.');
+    } else if (st.at === -2) html += '<br>That square is impassable: nothing can stand there.';
+    else html += '<br>Tap any square to place the selected piece.';
+    $('status').innerHTML = html;
+  }
+  cv.addEventListener('pointerup', (e) => {
+    const r = cv.getBoundingClientRect(), f = Math.floor((e.clientX - r.left) / r.width * N), rk = N - 1 - Math.floor((e.clientY - r.top) / r.height * N);
+    if (f < 0 || f >= N || rk < 0 || rk >= N) return;
+    const s = rk * N + f;
+    st.at = isBlocked(st.terrain, s) ? -2 : (st.at === s ? -1 : s);
+    draw();
+  });
+  window.addEventListener('resize', draw);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(draw).observe(cv);
+  st.color = +st.color || 0;
+  regen(); sync();
+})();
+</script>

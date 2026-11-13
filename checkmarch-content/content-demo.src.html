@@ -1,0 +1,287 @@
+<title>Checkmarch Content Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#f6f1e7; --panel:#fffaf1; --panel2:#efe6d6; --fg:#2b241c; --muted:#6f6352; --line:#ddd0bb;
+  --accent:#7a4e1f; --accent-soft:#f0dfc6; --danger:#b3261e; --good:#2f6b3a;
+  --sq-light:#efe2c8; --sq-dark:#b48a5f; --sq-off:#e4dccd; --sq-off2:#d6cbb8;
+  --piece-player:#fbf6ea; --piece-enemy:#2a1f17; --piece-outline:#2a1f17; --piece-accent:#e0a44a;
+  --chip:#efe6d6; --chip-fg:#4a3e30;
+  --agg:#b3261e; --sol:#2f5e8a; --mat:#8a6a12;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171a20; --panel:#20242c; --panel2:#2a2f39; --fg:#e7e9ee; --muted:#9aa2b1; --line:#353b47;
+  --accent:#e0b878; --accent-soft:#3a3326; --danger:#ff6b5e; --good:#7fc48a;
+  --sq-light:#9aa6b8; --sq-dark:#56627a; --sq-off:#2b313c; --sq-off2:#252a33;
+  --piece-player:#f4f1ea; --piece-enemy:#11141a; --piece-outline:#0b0d11; --piece-accent:#f0c070;
+  --chip:#2a2f39; --chip-fg:#cfd5e0;
+  --agg:#ff7a6e; --sol:#7fb2e6; --mat:#e0c060;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#171a20; --panel:#20242c; --panel2:#2a2f39; --fg:#e7e9ee; --muted:#9aa2b1; --line:#353b47;
+  --accent:#e0b878; --accent-soft:#3a3326; --danger:#ff6b5e; --good:#7fc48a;
+  --sq-light:#9aa6b8; --sq-dark:#56627a; --sq-off:#2b313c; --sq-off2:#252a33;
+  --piece-player:#f4f1ea; --piece-enemy:#11141a; --piece-outline:#0b0d11; --piece-accent:#f0c070;
+  --chip:#2a2f39; --chip-fg:#cfd5e0;
+  --agg:#ff7a6e; --sol:#7fb2e6; --mat:#e0c060;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+.wrap{max-width:880px;margin:0 auto}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 10px}
+h1{font-size:22px;margin:0;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:13px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:2}
+nav button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+nav button .n{font-variant-numeric:tabular-nums;opacity:.75;margin-left:4px;font-size:12px}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.tools button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
+.tools button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.card h3{margin:0 0 2px;font-size:15px}
+.meta{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.opt{margin-top:8px;padding:8px;border-radius:8px;background:var(--panel2)}
+.opt .lab{font-weight:600}
+.opt .ab{display:inline-block;width:18px;font-weight:700;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.chip{background:var(--chip);color:var(--chip-fg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.val{float:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.doc{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.doc.aggressive{color:var(--agg)} .doc.solid{color:var(--sol)} .doc.material{color:var(--mat)}
+.taunt{font-style:italic;margin:6px 0 4px}
+.note{color:var(--muted);font-size:13px}
+.board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;max-width:220px;aspect-ratio:1;border-radius:6px;overflow:hidden;margin:8px auto 6px;border:1px solid var(--line)}
+.sq{display:flex;align-items:center;justify-content:center;font-size:clamp(14px,5.4vw,22px);line-height:1;position:relative}
+.sq.l{background:var(--sq-light)} .sq.d{background:var(--sq-dark)}
+.sq.off.l{background:var(--sq-off)} .sq.off.d{background:var(--sq-off2)}
+.sq .pc{color:var(--piece-enemy);text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.sq .ord{position:absolute;right:1px;bottom:0;font-size:8px;color:var(--fg);opacity:.55;font-variant-numeric:tabular-nums}
+.sq.k{box-shadow:inset 0 0 0 2px var(--accent)}
+.legend{font-size:12px;color:var(--muted);text-align:center}
+.sets .row{display:flex;gap:6px;justify-content:center;font-size:30px;line-height:1.1;padding:8px 4px;border-radius:8px;background:var(--sq-dark);margin-top:6px}
+.sets .row.e{background:var(--sq-light)}
+.sets .g{color:var(--piece-player)}
+.sets .row.e .g{color:var(--piece-enemy)}
+ul.lines{margin:6px 0 0;padding-left:18px} ul.lines li{margin:3px 0}
+ul.lines .ph{color:var(--accent);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);font-weight:600}
+td code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sec h2{font-size:16px;margin:16px 0 6px;text-transform:capitalize}
+.hidden{display:none}
+@media (prefers-reduced-motion: no-preference){ nav button,.tools button{transition:background .15s,border-color .15s} }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Checkmarch Content Pack</h1>
+    <span class="sub" id="summary"></span>
+  </header>
+  <nav id="tabs" role="tablist"></nav>
+  <main id="view"></main>
+</div>
+<script>
+const DATA = /*__CONTENT__*/null;
+(function () {
+  const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+  const WGLYPH = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' };
+  const PIECE_NAME = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const view = document.getElementById('view'), tabs = document.getElementById('tabs');
+  let store = {}; try { store = JSON.parse(localStorage.getItem('cm-content-demo') || '{}') || {}; } catch (e) { store = {}; }
+  const save = () => { try { localStorage.setItem('cm-content-demo', JSON.stringify(store)); } catch (e) { /* ignore */ } };
+
+  function effectChips(effect) {
+    const box = el('div', 'chips');
+    const parts = effect.kind === 'combo' ? effect.parts : [effect];
+    for (const p of parts) {
+      const args = Object.entries(p).filter(([k]) => k !== 'kind').map(([k, v]) => k + ':' + v).join(' ');
+      box.appendChild(el('span', 'chip', p.kind + (args ? ' ' + args : '')));
+    }
+    return box;
+  }
+  function docTag(d) { return el('span', 'doc ' + d, d); }
+
+  function renderShrines() {
+    const f = el('div');
+    const regions = [...new Set(DATA.shrines.map(c => c.minRegion))].sort((a, b) => a - b);
+    const cur = store.shrineRegion || 'all';
+    const tools = el('div', 'tools');
+    for (const r of ['all', ...regions]) {
+      const b = el('button', null, r === 'all' ? 'All regions' : 'From region ' + r);
+      b.setAttribute('aria-pressed', String(String(cur) === String(r)));
+      b.onclick = () => { store.shrineRegion = r; save(); show('shrines'); };
+      tools.appendChild(b);
+    }
+    f.appendChild(tools);
+    const g = el('div', 'grid');
+    for (const c of DATA.shrines) {
+      if (cur !== 'all' && c.minRegion !== +cur) continue;
+      const card = el('div', 'card');
+      card.appendChild(el('h3', null, c.name));
+      card.appendChild(el('div', 'meta', c.id + ' · from region ' + c.minRegion));
+      for (const side of ['a', 'b']) {
+        const o = el('div', 'opt');
+        o.appendChild(el('span', 'val', '≈' + Math.round(c[side].value) + ' g'));
+        o.appendChild(el('span', 'ab', side.toUpperCase()));
+        o.appendChild(el('span', 'lab', c[side].label));
+        o.appendChild(effectChips(c[side].effect));
+        card.appendChild(o);
+      }
+      g.appendChild(card);
+    }
+    f.appendChild(g);
+    return f;
+  }
+
+  function renderLords() {
+    const g = el('div', 'grid');
+    for (const l of DATA.lords) {
+      const card = el('div', 'card');
+      card.appendChild(docTag(l.doctrine));
+      card.appendChild(el('h3', null, l.name));
+      card.appendChild(el('div', 'meta', l.epithet));
+      card.appendChild(el('div', 'taunt', '“' + l.taunt + '”'));
+      card.appendChild(el('div', 'note', l.personalityNote));
+      const ch = el('div', 'chips');
+      ch.appendChild(el('span', 'chip', 'favors ' + l.favoredPieces.map(p => PIECE_NAME[p]).join(', ')));
+      ch.appendChild(el('span', 'chip', 'formations: ' + (l.formations.join(', ') || 'none')));
+      card.appendChild(ch);
+      g.appendChild(card);
+    }
+    return g;
+  }
+
+  function miniBoard(f) {
+    const b = el('div', 'board');
+    const at = {}; f.pieces.forEach((p, i) => { at[p.square] = { t: p.type, i }; });
+    for (let r = 8; r >= 1; r--) for (let c = 0; c < 8; c++) {
+      const name = 'abcdefgh'[c] + r, light = (c + r) % 2 === 1;
+      const sq = el('div', 'sq ' + (light ? 'l' : 'd') + (r < 5 ? ' off' : ''));
+      const p = at[name];
+      if (p) {
+        if (p.t === 'K') sq.classList.add('k');
+        sq.appendChild(el('span', 'pc', GLYPH[p.t]));
+        if (p.i > 0) sq.appendChild(el('span', 'ord', String(p.i)));
+        sq.title = PIECE_NAME[p.t] + ' ' + name + (p.i ? ' (slot ' + p.i + ')' : '');
+      }
+      b.appendChild(sq);
+    }
+    return b;
+  }
+  function renderFormations() {
+    const f = el('div');
+    const cur = store.fDoc || 'all';
+    const tools = el('div', 'tools');
+    for (const d of ['all', 'aggressive', 'solid', 'material', 'citadel']) {
+      const b = el('button', null, d === 'all' ? 'All' : d);
+      b.setAttribute('aria-pressed', String(cur === d));
+      b.onclick = () => { store.fDoc = d; save(); show('formations'); };
+      tools.appendChild(b);
+    }
+    f.appendChild(tools);
+    const g = el('div', 'grid');
+    for (const fm of DATA.formations) {
+      if (cur === 'citadel' ? !fm.citadel : cur !== 'all' && fm.doctrine !== cur) continue;
+      const card = el('div', 'card');
+      card.appendChild(docTag(fm.doctrine));
+      card.appendChild(el('h3', null, fm.name + (fm.citadel ? ' — citadel' : '')));
+      card.appendChild(el('div', 'meta', fm.budget + ' units · tiers ' + fm.tiers[0] + '–' + fm.tiers[1] + ' · ' + (fm.pieces.length - 1) + ' slots · favors ' + fm.favored.join('')));
+      card.appendChild(miniBoard(fm));
+      card.appendChild(el('div', 'legend', 'Small numbers: fill order. Ranks 1–4 dimmed.'));
+      g.appendChild(card);
+    }
+    f.appendChild(g);
+    return f;
+  }
+
+  function renderSets() {
+    const g = el('div', 'grid sets');
+    for (const s of DATA.pieceSets) {
+      const card = el('div', 'card');
+      card.appendChild(el('h3', null, s.name));
+      const u = s.unlockedBy;
+      const how = u.kind === 'default' ? 'Unlocked from the start' : u.kind === 'memories' ? u.v + ' lifetime Memories' :
+        u.kind === 'region' ? 'Reach region ' + u.v : u.kind === 'citadels' ? 'Win ' + u.v + ' rival seats' : 'Forge your first ' + u.material + ' bar';
+      card.appendChild(el('div', 'meta', how + ' · weight ' + s.glyphWeight + ' · outline ' + s.outline));
+      for (const side of ['player', 'enemy']) {
+        const row = el('div', 'row' + (side === 'enemy' ? ' e' : ''));
+        const t = s[side];
+        for (const k of ['K', 'Q', 'R', 'B', 'N', 'P']) {
+          const gl = el('span', 'g', side === 'enemy' ? GLYPH[k] : WGLYPH[k]);
+          gl.style.fontWeight = s.glyphWeight;
+          gl.style.textShadow = s.css['--pc-outline'];
+          gl.style.filter = 'brightness(' + (100 + t.light) + '%)';
+          gl.style.color = side === 'player' ? 'color-mix(in oklab, var(--piece-player) 72%, hsl(' + (40 + t.hue) + ' 70% 50%))'
+            : 'color-mix(in oklab, var(--piece-enemy) 70%, hsl(' + (40 + t.hue) + ' 60% 40%))';
+          row.appendChild(gl);
+        }
+        card.appendChild(row);
+      }
+      g.appendChild(card);
+    }
+    return g;
+  }
+
+  function renderLines() {
+    const f = el('div');
+    for (const [k, lines] of Object.entries(DATA.lines)) {
+      const s = el('section', 'sec card');
+      s.appendChild(el('h2', null, k.replace(/([A-Z])/g, ' $1').toLowerCase() + ' (' + lines.length + ')'));
+      const ul = el('ul', 'lines');
+      for (const line of lines) {
+        const li = el('li');
+        for (const part of line.split(/(\{\w+\})/)) li.appendChild(/^\{\w+\}$/.test(part) ? el('span', 'ph', part) : document.createTextNode(part));
+        ul.appendChild(li);
+      }
+      s.appendChild(ul); f.appendChild(s);
+      f.appendChild(el('div', null, '')).style.height = '10px';
+    }
+    return f;
+  }
+
+  function renderEffects() {
+    const w = el('div', 'tw'); const t = el('table');
+    const h = el('tr'); for (const c of ['kind', 'params', 'scopes', 'used', 'meaning']) h.appendChild(el('th', null, c)); t.appendChild(h);
+    for (const [k, d] of Object.entries(DATA.effects)) {
+      const tr = el('tr');
+      const c1 = el('td'); c1.appendChild(el('code', null, k)); tr.appendChild(c1);
+      const c2 = el('td'); c2.appendChild(el('code', null, Object.entries(d.params).map(([n, s]) => n + ':' + (s[0] === 'enum' ? s[1].join('|') : s[0] + '[' + s[1] + ',' + s[2] + ']')).join(' ') || '(parts)')); tr.appendChild(c2);
+      tr.appendChild(el('td', null, (d.scopes || []).join(', ') || '—'));
+      tr.appendChild(el('td', null, String(d.used)));
+      tr.appendChild(el('td', null, d.text));
+      t.appendChild(tr);
+    }
+    w.appendChild(t); return w;
+  }
+
+  const TABS = [
+    ['shrines', 'Shrines', () => DATA.shrines.length, renderShrines],
+    ['lords', 'Rival lords', () => DATA.lords.length, renderLords],
+    ['formations', 'Formations', () => DATA.formations.length, renderFormations],
+    ['sets', 'Piece sets', () => DATA.pieceSets.length, renderSets],
+    ['lines', 'Event lines', () => Object.values(DATA.lines).reduce((a, l) => a + l.length, 0), renderLines],
+    ['effects', 'Effect vocabulary', () => Object.keys(DATA.effects).length, renderEffects],
+  ];
+  function show(id) {
+    store.tab = id; save();
+    for (const b of tabs.children) b.setAttribute('aria-selected', String(b.dataset.id === id));
+    const tab = TABS.find(x => x[0] === id) || TABS[0];
+    view.replaceChildren(tab[3]());
+  }
+  for (const [id, label, count] of TABS) {
+    const b = el('button'); b.dataset.id = id; b.setAttribute('role', 'tab');
+    b.appendChild(document.createTextNode(label)); b.appendChild(el('span', 'n', String(count())));
+    b.onclick = () => show(id); tabs.appendChild(b);
+  }
+  document.getElementById('summary').textContent = 'content v' + DATA.version + ' · pure data, validated by test-content.mjs';
+  show(TABS.some(t => t[0] === store.tab) ? store.tab : 'shrines');
+})();
+</script>

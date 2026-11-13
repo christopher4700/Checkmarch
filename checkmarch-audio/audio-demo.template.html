@@ -1,0 +1,95 @@
+<title>Checkmarch Audio Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#f6f1e7; --panel:#fffaf0; --fg:#2b2620; --muted:#6f655a; --line:#e2d8c6;
+  --btn:#efe5d3; --btn-fg:#2b2620; --accent:#3f6e8c; --accent-fg:#ffffff; --danger:#c0392b;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#1b1f26; --panel:#232934; --fg:#e7e9ee; --muted:#9aa3b2; --line:#343c4a;
+  --btn:#2d3542; --btn-fg:#e7e9ee; --accent:#7fb0d3; --accent-fg:#10151c; --danger:#e0645a;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#1b1f26; --panel:#232934; --fg:#e7e9ee; --muted:#9aa3b2; --line:#343c4a;
+  --btn:#2d3542; --btn-fg:#e7e9ee; --accent:#7fb0d3; --accent-fg:#10151c; --danger:#e0645a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+main{max-width:560px;margin:0 auto}
+h1{font-size:1.35rem;margin:8px 0 2px}
+p{margin:0 0 12px;color:var(--muted)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px}
+button{min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--btn);color:var(--btn-fg);
+  font:inherit;padding:0 14px;cursor:pointer;touch-action:manipulation}
+button:active{transform:translateY(1px)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#enable{width:100%;background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600}
+#enable[aria-pressed="true"]{background:var(--btn);color:var(--btn-fg);border-color:var(--line)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid button.raid{color:var(--danger)}
+.row{display:flex;align-items:center;gap:12px}
+input[type=range]{flex:1;min-height:44px;accent-color:var(--accent)}
+#level{font-variant-numeric:tabular-nums;min-width:9ch;text-align:right}
+.status{font-size:.85rem;color:var(--muted);margin-top:8px}
+</style>
+<main>
+  <h1>Checkmarch audio</h1>
+  <p>Everything here is synthesized live with Web Audio. Tap Enable first; browsers only allow sound after a tap.</p>
+
+  <section>
+    <button id="enable" aria-pressed="false">Enable sound</button>
+    <div class="status" id="status">Sound is off.</div>
+  </section>
+
+  <section>
+    <h2>Ambient intensity</h2>
+    <div class="row">
+      <input id="intensity" type="range" min="0" max="3" step="1" value="0" aria-label="Intensity">
+      <span id="level">0 · Map</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>One-shots</h2>
+    <div class="grid" id="sfx"></div>
+  </section>
+</main>
+<script type="module">
+// audio.mjs inlined below by build-demo.mjs (no external files).
+__AUDIO_MODULE__
+const audio = createAudio();
+const NAMES = ['Map', 'Battle', 'Danger', 'Citadel'];
+const $ = (id) => document.getElementById(id);
+let on = false;
+function refresh(){
+  $('enable').textContent = on ? 'Mute sound' : 'Enable sound';
+  $('enable').setAttribute('aria-pressed', String(on));
+  const s = audio.state;
+  $('status').textContent = !s.supported ? 'Web Audio is not available in this browser.'
+    : on ? 'Playing. Intensity ' + s.intensity + ' (' + NAMES[s.intensity] + ').' : 'Sound is off.';
+}
+$('enable').addEventListener('click', () => {
+  on = !on;
+  if (on) { audio.unlock(); audio.setEnabled(true); } else audio.setEnabled(false);
+  refresh();
+});
+$('intensity').addEventListener('input', (e) => {
+  const v = Number(e.target.value);
+  audio.setIntensity(v);
+  $('level').textContent = v + ' · ' + NAMES[v];
+  refresh();
+});
+for (const ev of ['move','capture','check','promote','win','lose','coin','buy','raid']) {
+  const b = document.createElement('button');
+  b.textContent = ev[0].toUpperCase() + ev.slice(1);
+  if (ev === 'raid') b.className = 'raid';
+  b.addEventListener('click', () => { if (!on) { on = true; audio.unlock(); audio.setEnabled(true); refresh(); } audio.play(ev); });
+  $('sfx').appendChild(b);
+}
+refresh();
+</script>

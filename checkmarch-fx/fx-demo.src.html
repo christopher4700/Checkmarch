@@ -1,0 +1,268 @@
+<title>Checkmarch FX Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one phone-width column: a mock board (the hero), a mock map strip, effect buttons, live stats. */
+:root {
+  --bg: #e9ece6; --panel: #f8f9f5; --panel-2: #eff1ea; --fg: #1d2420; --muted: #5d685f; --line: #cfd5cb;
+  --accent: #2c6a58; --accent-fg: #f4fbf7; --accent-soft: rgba(44,106,88,.14);
+  --gold: #9a6a0c; --danger: #c42f39; --rival: #8a3a6c;
+  --sq-light: #efe2c4; --sq-dark: #a8784d; --p-fill: #fbf8f0; --p-ink: #2b2118; --e-fill: #2a1d24;
+  --map-paper: #f3e7cc; --map-road: #a88a5c; --map-mine: #b07a1f; --map-node: #6b5b8a; --map-ink: #3b2f22;
+  --fx-gold: #b07a1f; --fx-veil: #0d1114; --fx-veil-ink: #eef0ea;
+  --shadow: 0 1px 2px rgba(30,30,20,.08), 0 8px 24px rgba(30,40,30,.10);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161a; --panel: #192026; --panel-2: #1f272e; --fg: #e3e8ec; --muted: #8f9ca6; --line: #2b353d;
+  --accent: #74c7a9; --accent-fg: #0d1d17; --accent-soft: rgba(116,199,169,.14);
+  --gold: #e4b54c; --danger: #ff5c63; --rival: #d68ac0;
+  --sq-light: #9eabb9; --sq-dark: #4c5a69; --p-fill: #f6f2e8; --p-ink: #191c20; --e-fill: #2b1f33;
+  --map-paper: #1c242b; --map-road: #6d7c8f; --map-mine: #e1ad4e; --map-node: #a998d0; --map-ink: #e3e8ec;
+  --fx-gold: #e4b54c; --fx-veil: #030507; --fx-veil-ink: #e3e8ec;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11161a; --panel: #192026; --panel-2: #1f272e; --fg: #e3e8ec; --muted: #8f9ca6; --line: #2b353d;
+  --accent: #74c7a9; --accent-fg: #0d1d17; --accent-soft: rgba(116,199,169,.14);
+  --gold: #e4b54c; --danger: #ff5c63; --rival: #d68ac0;
+  --sq-light: #9eabb9; --sq-dark: #4c5a69; --p-fill: #f6f2e8; --p-ink: #191c20; --e-fill: #2b1f33;
+  --map-paper: #1c242b; --map-road: #6d7c8f; --map-mine: #e1ad4e; --map-node: #a998d0; --map-ink: #e3e8ec;
+  --fx-gold: #e4b54c; --fx-veil: #030507; --fx-veil-ink: #e3e8ec;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px;
+  -webkit-tap-highlight-color: transparent; overflow-x: hidden }
+main { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px }
+h1 { font: 700 22px/1.2 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; margin: 0 }
+.lede { margin: 0; color: var(--muted); font-size: 13.5px }
+button { font: inherit; color: inherit; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); padding: 0 12px; cursor: pointer; touch-action: manipulation }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+button:active { transform: translateY(1px) }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 650 }
+button.danger { color: var(--danger); border-color: var(--danger) }
+button.rv { color: var(--rival); border-color: var(--rival) }
+.boardwrap { width: min(92vw, 420px, 100%); margin: 0 auto; position: relative }
+.board { position: relative; width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); touch-action: manipulation; user-select: none; -webkit-user-select: none }
+.sqs { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr) }
+.sq { background: var(--sq-light) } .sq.d { background: var(--sq-dark) }
+.pcs { position: absolute; inset: 0; pointer-events: none }
+.pc { position: absolute; left: 0; top: 0; width: 12.5%; height: 12.5%; display: grid; place-items: center; font-size: min(9vw, 38px); line-height: 1;
+  font-family: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", "Noto Sans Symbols 2", serif; transition: transform .26s cubic-bezier(.3,.7,.3,1) }
+.pc.w { color: var(--p-fill); text-shadow: 0 0 1px var(--p-ink), 0 0 1px var(--p-ink), 0 1px 2px rgba(0,0,0,.4) }
+.pc.b { color: var(--e-fill); text-shadow: 0 1px 2px rgba(0,0,0,.35) }
+.mapbox { position: relative; border-radius: 14px; overflow: hidden; background: var(--map-paper); border: 1px solid var(--line); box-shadow: var(--shadow) }
+canvas#map { display: block; width: 100%; height: 120px; cursor: pointer; touch-action: manipulation }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px }
+.card h2 { margin: 0; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.grid button { padding: 0 6px; font-size: 14px }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden }
+.stat { padding: 8px 10px; display: flex; flex-direction: column; min-width: 0 }
+.stat + .stat { border-left: 1px solid var(--line) }
+.stat b { font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap }
+.stat span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap }
+.row { display: flex; gap: 8px } .row button { flex: 1 }
+.note { font-size: 12.5px; color: var(--muted); margin: 0 }
+@media (prefers-reduced-motion: reduce) { .pc { transition: none } }
+</style>
+
+<main id="main">
+  <header class="top">
+    <h1>Checkmarch FX</h1>
+    <button id="btnTheme" type="button" aria-label="Theme">Auto</button>
+  </header>
+  <p class="lede">Every effect the game can fire, drawn on one overlay canvas per surface. Tap any square for a capture burst, or the map for a coin.</p>
+  <div class="stats" role="group" aria-label="FX stats">
+    <div class="stat"><b id="sFps">idle</b><span>FPS</span></div>
+    <div class="stat"><b id="sPart">0</b><span>Particles</span></div>
+    <div class="stat"><b id="sFx">0</b><span>Effects</span></div>
+    <div class="stat"><b id="sLoop">asleep</b><span>Loop</span></div>
+  </div>
+  <div class="boardwrap">
+    <div class="board" id="board" aria-label="Mock board">
+      <div class="sqs" id="sqs"></div>
+      <div class="pcs" id="pcs"></div>
+    </div>
+  </div>
+  <section class="card" aria-label="Board effects">
+    <h2>Board</h2>
+    <div class="grid" id="boardBtns">
+      <button type="button" data-fx="capture" class="danger">Capture</button>
+      <button type="button" data-fx="move">Move trail</button>
+      <button type="button" data-fx="check" class="danger">Check</button>
+      <button type="button" data-fx="promote">Promote</button>
+      <button type="button" data-fx="trait">Trait save</button>
+      <button type="button" data-fx="glint" id="btnGlint">Glint T1</button>
+    </div>
+  </section>
+  <div class="mapbox"><canvas id="map" aria-label="Mock map. Tap for a coin glint."></canvas></div>
+  <section class="card" aria-label="Map and moment effects">
+    <h2>Map and moments</h2>
+    <div class="grid">
+      <button type="button" data-fx="mine">Mine tick</button>
+      <button type="button" data-fx="rival" class="rv">Rival capture</button>
+      <button type="button" data-fx="income">Income x5</button>
+      <button type="button" data-fx="win" class="primary">Region win</button>
+      <button type="button" data-fx="over" class="danger">Run over</button>
+      <button type="button" data-fx="stress">Stress x20</button>
+    </div>
+  </section>
+  <section class="card" aria-label="Motion">
+    <h2>Motion</h2>
+    <div class="row">
+      <button type="button" id="btnMotion">Motion: system</button>
+      <button type="button" id="btnClear">Clear all</button>
+    </div>
+    <p class="note" id="motionNote"></p>
+  </section>
+</main>
+
+<script>
+(() => {
+"use strict";
+/*@FX*/
+
+const $ = (id) => document.getElementById(id);
+const GW = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' }, GB = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+const VS = '︎';
+const sqXY = (sq) => [sq & 7, 7 - (sq >> 3)];
+
+// ---------- mock board ----------
+const sqs = $('sqs');
+for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) {
+  const d = document.createElement('div');
+  const sq = (7 - row) * 8 + col;
+  d.className = 'sq' + ((row + col) % 2 ? ' d' : '');
+  d.dataset.sq = sq;
+  sqs.appendChild(d);
+}
+const start = [[4, 'K', 1], [3, 'Q', 1], [1, 'N', 1], [12, 'P', 1], [11, 'P', 1], [13, 'P', 1], [49, 'P', 1],
+  [60, 'K', 0], [59, 'Q', 0], [62, 'N', 0], [52, 'P', 0], [51, 'P', 0], [53, 'P', 0], [56, 'R', 0]];
+const pieces = new Map();
+function place(sq, t, white) {
+  const el = document.createElement('div');
+  el.className = 'pc ' + (white ? 'w' : 'b'); el.textContent = (white ? GW : GB)[t] + VS;
+  const [x, y] = sqXY(sq); el.style.transform = `translate(${x * 100}%, ${y * 100}%)`;
+  $('pcs').appendChild(el); pieces.set(sq, { el, t, white });
+}
+function resetPieces() { $('pcs').textContent = ''; pieces.clear(); for (const [sq, t, w] of start) place(sq, t, w); }
+resetPieces();
+function movePiece(from, to) {
+  const p = pieces.get(from); if (!p) return false;
+  const victim = pieces.get(to); if (victim) victim.el.remove();
+  pieces.delete(from); pieces.set(to, p);
+  const [x, y] = sqXY(to); p.el.style.transform = `translate(${x * 100}%, ${y * 100}%)`;
+  return !!victim;
+}
+
+// ---------- mock map ----------
+const mapCv = $('map');
+const NODES = [{ x: 0.08, y: 0.55, t: 'keep' }, { x: 0.27, y: 0.35, t: 'mine' }, { x: 0.45, y: 0.62, t: 'node' }, { x: 0.63, y: 0.38, t: 'mine' }, { x: 0.82, y: 0.58, t: 'rival' }];
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawMap() {
+  const w = mapCv.clientWidth, h = mapCv.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+  mapCv.width = Math.round(w * dpr); mapCv.height = Math.round(h * dpr);
+  const g = mapCv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = cssVar('--map-paper'); g.fillRect(0, 0, w, h);
+  g.strokeStyle = cssVar('--map-road'); g.lineWidth = 4; g.lineCap = 'round'; g.setLineDash([2, 8]);
+  g.beginPath(); NODES.forEach((n, i) => { const X = n.x * w, Y = n.y * h; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.stroke(); g.setLineDash([]);
+  for (const n of NODES) {
+    g.fillStyle = n.t === 'mine' ? cssVar('--map-mine') : n.t === 'rival' ? cssVar('--rival') : n.t === 'keep' ? cssVar('--accent') : cssVar('--map-node');
+    g.beginPath(); g.arc(n.x * w, n.y * h, 14, 0, Math.PI * 2); g.fill();
+    g.fillStyle = cssVar('--map-paper'); g.font = '700 12px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(n.t === 'mine' ? '$' : n.t === 'rival' ? '!' : n.t === 'keep' ? 'K' : '?', n.x * w, n.y * h + 0.5);
+  }
+}
+const nodeXY = (n) => [n.x * mapCv.clientWidth, n.y * mapCv.clientHeight];
+
+// ---------- fx instances ----------
+const palette = () => fxPaletteFromCSS(document.documentElement);
+const boardFx = createFX($('board'), { palette: palette() });
+const mapFx = createFX(mapCv.parentNode, { palette: palette() });
+const pageFx = createFX(document.body, { fixed: true, palette: palette() });
+const all = [boardFx, mapFx, pageFx];
+function repalette() { const p = palette(); all.forEach((f) => f.setPalette(p)); drawMap(); }
+
+const occupied = () => [...pieces.keys()];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+let glintTier = 1;
+const moves = [[12, 28], [28, 12], [1, 18], [18, 1], [3, 21], [21, 3]];
+let moveI = 0;
+
+function fire(kind) {
+  const ink = cssVar('--e-fill');
+  switch (kind) {
+    case 'capture': { const sq = pick(occupied()); boardFx.captureBurst(sq, pieces.get(sq).white ? cssVar('--p-ink') : ink); break; }
+    case 'move': {
+      let [a, b] = moves[moveI++ % moves.length];
+      if (!pieces.has(a)) { resetPieces(); [a, b] = moves[0]; moveI = 1; }
+      const p = pieces.get(a), captured = movePiece(a, b);
+      boardFx.moveTrail(a, b, p.white ? cssVar('--accent') : cssVar('--danger'));
+      if (captured) setTimeout(() => boardFx.captureBurst(b), 240);
+      break;
+    }
+    case 'check': boardFx.checkPulse(4); break;
+    case 'promote': {
+      if (pieces.has(49) && pieces.get(49).t === 'P') { const p = pieces.get(49); movePiece(49, 57); p.t = 'Q'; setTimeout(() => { p.el.textContent = GW.Q + VS; }, 200); }
+      boardFx.promoteFlare(57); break;
+    }
+    case 'trait': boardFx.traitSave(pick(occupied()), pick(['Stubborn: saved!', 'Loyal: held!', 'Shieldwall!', 'Lucky: dodged!'])); break;
+    case 'glint': boardFx.materialGlint(pick(occupied()), glintTier); glintTier = glintTier % 4 + 1; $('btnGlint').textContent = 'Glint T' + glintTier; break;
+    case 'mine': { const [x, y] = nodeXY(NODES[1]); mapFx.mineTick(x, y - 6); break; }
+    case 'income': [1, 3].forEach((i, j) => { for (let k = 0; k < 3; k++) setTimeout(() => { const [x, y] = nodeXY(NODES[i]); mapFx.mineTick(x + (k - 1) * 6, y - 6); }, (j * 3 + k) * 90); }); break;
+    case 'rival': { const [x, y] = nodeXY(NODES[3]); mapFx.rivalCapture(x, y); break; }
+    case 'win': pageFx.regionWin({ title: 'Region cleared', subtitle: 'The Marches of Vel: +240 gold' }); break;
+    case 'over': pageFx.runOver({ title: 'Checkmate', subtitle: 'Run 3 ends at region 7: +12 Memories', desaturate: $('main') }); break;
+    case 'stress': for (let i = 0; i < 20; i++) boardFx.captureBurst(Math.floor(Math.random() * 64), pick([cssVar('--danger'), cssVar('--accent'), ink])); break;
+  }
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('button[data-fx]'); if (b) fire(b.dataset.fx); });
+$('board').addEventListener('pointerdown', (e) => {
+  const r = $('board').getBoundingClientRect();
+  const col = Math.floor((e.clientX - r.left) / r.width * 8), row = Math.floor((e.clientY - r.top) / r.height * 8);
+  if (col < 0 || col > 7 || row < 0 || row > 7) return;
+  const sq = (7 - row) * 8 + col, p = pieces.get(sq);
+  boardFx.captureBurst(sq, p ? (p.white ? cssVar('--p-ink') : cssVar('--e-fill')) : cssVar('--accent'));
+});
+mapCv.addEventListener('pointerdown', (e) => { const r = mapCv.getBoundingClientRect(); mapFx.mineTick(e.clientX - r.left, e.clientY - r.top); });
+
+// ---------- motion + theme ----------
+const MOTION = [['system', null], ['reduced', true], ['full', false]];
+let motionI = 0;
+function renderMotion() {
+  const [label, v] = MOTION[motionI];
+  $('btnMotion').textContent = 'Motion: ' + label;
+  all.forEach((f) => f.setReducedMotion(v));
+  const red = boardFx.stats().reduced;
+  $('motionNote').textContent = red
+    ? 'Reduced motion: no particles and no animation frames. Labels, banners, the check ring and the run-over veil appear as stills, then clear.'
+    : 'Full motion: particles run on requestAnimationFrame only while something is alive, then the loop sleeps.';
+}
+$('btnMotion').addEventListener('click', () => { motionI = (motionI + 1) % MOTION.length; renderMotion(); });
+$('btnClear').addEventListener('click', () => { all.forEach((f) => f.clear()); resetPieces(); });
+const THEMES = ['auto', 'light', 'dark'];
+let themeI = 0;
+$('btnTheme').addEventListener('click', () => {
+  themeI = (themeI + 1) % 3; const th = THEMES[themeI], de = document.documentElement;
+  if (th === 'auto') de.removeAttribute('data-theme'); else de.setAttribute('data-theme', th);
+  $('btnTheme').textContent = th === 'auto' ? 'Auto' : th === 'light' ? 'Day' : 'Night';
+  repalette();
+});
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', repalette); } catch (e) { /* old browser */ }
+window.addEventListener('resize', drawMap);
+try { matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => setTimeout(renderMotion, 0)); } catch (e) { /* old browser */ }
+
+// ---------- stats readout (polls; the fx loops themselves sleep when idle) ----------
+setInterval(() => {
+  let p = 0, n = 0, awake = false, fps = 0;
+  for (const f of all) { const s = f.stats(); p += s.particles; n += s.effects; if (s.awake) { awake = true; fps = Math.max(fps, s.fps); } }
+  $('sFps').textContent = awake ? String(fps) : 'idle';
+  $('sPart').textContent = String(p); $('sFx').textContent = String(n);
+  $('sLoop').textContent = awake ? 'running' : 'asleep';
+}, 250);
+
+drawMap(); renderMotion();
+})();
+</script>

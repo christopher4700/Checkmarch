@@ -1,0 +1,392 @@
+<title>Checkmarch Rival Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#f6efe0; --fg:#2f261b; --muted:#7a6a55; --panel:#fffaf0; --line:#e2d4b6;
+  --accent:#3f7d5a; --accent-fg:#ffffff; --danger:#c0392b; --field:#ffffff;
+  --rival:#8a3a6c; --rival-fg:#ffffff; --rival-tint:rgba(138,58,108,0.15);
+  --map-paper:#f3e7cc; --map-paper-edge:#d9c59b; --map-paper-mark:rgba(120,90,40,0.13);
+  --map-road:#a88a5c; --map-road-held:#3f7d5a; --map-road-fog:rgba(120,95,60,0.35);
+  --map-held-tint:rgba(63,125,90,0.16); --map-held-ring:#3f7d5a; --map-frontier:#b5832a;
+  --map-fog:#d8c9a8; --map-fog-edge:#c4b28c; --map-ink:#3b2f22; --map-ink-soft:#7a6a55;
+  --map-glyph:#fffaf0; --map-badge-edge:rgba(40,28,12,0.35); --map-shadow:rgba(60,40,10,0.22);
+  --map-danger:#c0392b; --map-keep:#3f7d5a; --map-garrison:#6b5b8a; --map-mine:#b07a1f;
+  --map-town:#3d7aa6; --map-shrine:#2f9a94; --map-citadel:#9b2f2a; --map-label-bg:rgba(255,250,238,0.94);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#171b21; --fg:#e7ecf2; --muted:#9aa6b5; --panel:#1f252d; --line:#323b47;
+    --accent:#6cc495; --accent-fg:#0f1a14; --danger:#ef6a5b; --field:#141920;
+    --rival:#d68ac0; --rival-fg:#1d1019; --rival-tint:rgba(214,138,192,0.14);
+    --map-paper:#232a33; --map-paper-edge:#38424f; --map-paper-mark:rgba(170,190,215,0.08);
+    --map-road:#6d7c8f; --map-road-held:#6cc495; --map-road-fog:rgba(130,145,165,0.30);
+    --map-held-tint:rgba(108,196,149,0.14); --map-held-ring:#6cc495; --map-frontier:#e0b354;
+    --map-fog:#353e4a; --map-fog-edge:#44505e; --map-ink:#e7ecf2; --map-ink-soft:#9aa6b5;
+    --map-glyph:#101418; --map-badge-edge:rgba(0,0,0,0.45); --map-shadow:rgba(0,0,0,0.40);
+    --map-danger:#ef6a5b; --map-keep:#6cc495; --map-garrison:#a998d0; --map-mine:#e1ad4e;
+    --map-town:#74b2e0; --map-shrine:#5fcfc8; --map-citadel:#ef6a5b; --map-label-bg:rgba(24,29,36,0.94);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#171b21; --fg:#e7ecf2; --muted:#9aa6b5; --panel:#1f252d; --line:#323b47;
+  --accent:#6cc495; --accent-fg:#0f1a14; --danger:#ef6a5b; --field:#141920;
+  --rival:#d68ac0; --rival-fg:#1d1019; --rival-tint:rgba(214,138,192,0.14);
+  --map-paper:#232a33; --map-paper-edge:#38424f; --map-paper-mark:rgba(170,190,215,0.08);
+  --map-road:#6d7c8f; --map-road-held:#6cc495; --map-road-fog:rgba(130,145,165,0.30);
+  --map-held-tint:rgba(108,196,149,0.14); --map-held-ring:#6cc495; --map-frontier:#e0b354;
+  --map-fog:#353e4a; --map-fog-edge:#44505e; --map-ink:#e7ecf2; --map-ink-soft:#9aa6b5;
+  --map-glyph:#101418; --map-badge-edge:rgba(0,0,0,0.45); --map-shadow:rgba(0,0,0,0.40);
+  --map-danger:#ef6a5b; --map-keep:#6cc495; --map-garrison:#a998d0; --map-mine:#e1ad4e;
+  --map-town:#74b2e0; --map-shrine:#5fcfc8; --map-citadel:#ef6a5b; --map-label-bg:rgba(24,29,36,0.94);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:12px;
+}
+.wrap{max-width:560px; margin:0 auto}
+header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px}
+h1{font-size:19px; margin:0; letter-spacing:.2px}
+h1 small{display:block; font-size:13px; font-weight:500; color:var(--muted)}
+.controls{display:grid; grid-template-columns:1fr auto; gap:8px; margin-bottom:10px; align-items:end}
+label.f{display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:2px; min-width:0}
+input{
+  min-height:44px; width:100%; padding:0 10px; font:inherit; color:var(--fg);
+  background:var(--field); border:1px solid var(--line); border-radius:10px;
+}
+button{
+  min-height:44px; padding:0 14px; font:inherit; font-weight:600; border-radius:10px;
+  border:1px solid var(--line); background:var(--panel); color:var(--fg); cursor:pointer;
+  touch-action:manipulation;
+}
+button:disabled{opacity:.5; cursor:default}
+button.primary{background:var(--accent); color:var(--accent-fg); border-color:transparent}
+button.rival{background:var(--rival); color:var(--rival-fg); border-color:transparent}
+button.on{outline:2px solid var(--accent); outline-offset:-2px}
+.mapbox{position:relative; border-radius:16px; overflow:hidden; background:var(--map-paper); border:1px solid var(--line)}
+canvas#map{display:block; width:100%; touch-action:pan-y; cursor:pointer}
+canvas#over{position:absolute; left:0; top:0; pointer-events:none}
+.hint{font-size:12px; color:var(--muted); margin:6px 2px 10px}
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px}
+.stat{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px 10px; min-width:0}
+.stat b{display:block; font-size:18px; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.stat span{font-size:12px; color:var(--muted)}
+.stat.rv b{color:var(--rival)}
+.timer{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:10px}
+.timer .bar{flex:1; height:8px; border-radius:99px; background:var(--line); overflow:hidden}
+.timer .bar i{display:block; height:100%; width:0; background:var(--rival); border-radius:99px}
+.timer b{font-variant-numeric:tabular-nums; min-width:92px; text-align:right}
+.speed{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:10px}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px}
+.card.alert{border-color:var(--rival); box-shadow:0 0 0 1px var(--rival) inset}
+.card h2{font-size:16px; margin:0 0 4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.card p{margin:0 0 8px; color:var(--muted); font-size:14px}
+.army{font-size:24px; letter-spacing:1px; line-height:1.2; color:var(--rival); margin:4px 0 8px; word-break:break-all}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.tag{font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px; border:1px solid var(--line); color:var(--muted)}
+.tag.rv{color:var(--rival); border-color:var(--rival)}
+ol.log{list-style:none; margin:0; padding:0; font-size:13px}
+ol.log li{display:flex; gap:8px; padding:5px 0; border-top:1px solid var(--line)}
+ol.log li:first-child{border-top:0}
+ol.log time{color:var(--muted); font-variant-numeric:tabular-nums; min-width:52px}
+ol.log li.r span{color:var(--rival)}
+@media (prefers-reduced-motion: reduce){ .timer .bar i{transition:none} }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Checkmarch<small>Living rival demo</small></h1>
+    <button id="theme" type="button" aria-label="Toggle theme">Theme: auto</button>
+  </header>
+
+  <div class="controls">
+    <label class="f">Seed<input id="seed" value="checkmarch" autocomplete="off" spellcheck="false"></label>
+    <button id="regen" class="primary" type="button">New region</button>
+  </div>
+
+  <div class="mapbox"><canvas id="map" aria-label="Region map: your territory in green, the rival's in plum"></canvas><canvas id="over" aria-hidden="true"></canvas></div>
+  <p class="hint">Tap a dashed frontier node to take it. Tap a plum node next to you to attack the rival. Drag sideways to pan.</p>
+
+  <div class="timer"><span>Rival</span><div class="bar"><i id="bar"></i></div><b id="eta">-</b></div>
+
+  <div class="speed">
+    <button id="x1" type="button" class="on">Speed x1</button>
+    <button id="x60" type="button">Fast x60</button>
+    <button id="away" type="button">Away 8 h</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="sYou">1</b><span>your nodes</span></div>
+    <div class="stat rv"><b id="sRiv">1</b><span>rival nodes</span></div>
+    <div class="stat rv"><b id="sStr">1.0</b><span>rival strength</span></div>
+    <div class="stat rv"><b id="sDw">0</b><span>dwellings</span></div>
+  </div>
+
+  <div class="card" id="card"></div>
+
+  <div class="card"><h2>Chronicle</h2><ol class="log" id="log"></ol></div>
+</div>
+
+<script>
+/*@INLINE*/
+
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const canvas = $('map'), over = $('over'), octx = over.getContext('2d');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let palette = mapPaletteFromCSS(document.documentElement);
+  let rivalColor = '#8a3a6c', rivalTint = 'rgba(138,58,108,0.15)';
+  let region = null, rv = null, held = [], selected = null, attack = null, speed = 1, logItems = [];
+  let lastTs = performance.now(), etaMax = 90;
+
+  const view = createMapView(canvas, { palette, onTap: tap });
+  const TYPE = { keep: 'Keep', garrison: 'Garrison', mine: 'Mine', town: 'Town', shrine: 'Shrine', citadel: 'Rival keep' };
+  const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+  const ORDER = 'KQRBNP';
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function clock(sec) { sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0'); }
+  function nodeName(id) { return region.nodes[id].name; }
+
+  function generate() {
+    const seed = $('seed').value.trim() || 'checkmarch';
+    region = generateRegion(seed, 1);
+    rv = createRival(region, { seed });
+    held = [region.keepId]; selected = null; attack = null; logItems = [];
+    etaMax = nextMoveEta(rv) || 90;
+    view.setRegion(region, held);
+    log('You hold ' + nodeName(region.keepId) + '. A rival lord stirs in ' + nodeName(region.citadelId) + '.', false);
+    refresh();
+  }
+
+  function log(text, isRival, t) {
+    logItems.unshift({ t: t != null ? t : rv ? rv.ms / 1000 : 0, text, r: isRival });
+    logItems = logItems.slice(0, 14);
+    $('log').innerHTML = logItems.map(i => '<li class="' + (i.r ? 'r' : '') + '"><time>' + clock(i.t) + '</time><span>' + esc(i.text) + '</span></li>').join('');
+  }
+
+  function eventText(e) {
+    const n = nodeName(e.nodeId);
+    if (e.type === 'capture') return 'The rival took ' + n + (region.nodes[e.nodeId].type === 'mine' ? ' and its mine.' : '.');
+    if (e.type === 'borderBattle') return 'The rival marches on your ' + n + '!';
+    if (e.type === 'keepAssault') return 'The rival assaults your keep!';
+    return 'The rival drills its troops at ' + n + '.';
+  }
+
+  function step(dtSec, online) {
+    if (!rv) return;
+    const r = advanceRival(rv, region, held, dtSec, Date.now(), { online });
+    rv = r.state;
+    const shown = online ? r.events : r.events.filter(e => e.type !== 'sortie');
+    for (const e of shown) log(eventText(e), true, e.at);
+    const drills = r.events.length - shown.length;
+    if (drills) log('The rival drilled its troops ' + drills + ' time' + (drills === 1 ? '' : 's') + '.', true);
+    if (r.events.length) { const eta = nextMoveEta(rv); if (eta) etaMax = eta; refresh(); }
+    return r.events;
+  }
+
+  function tick() {
+    const now = performance.now();
+    const real = Math.min(5, (now - lastTs) / 1000);
+    lastTs = now;
+    step(real * speed, true);
+    renderTimer();
+  }
+
+  function renderTimer() {
+    const eta = nextMoveEta(rv);
+    if (rv.status === 'won') { $('eta').textContent = 'victorious'; $('bar').style.width = '100%'; return; }
+    if (rv.status === 'defeated') { $('eta').textContent = 'defeated'; $('bar').style.width = '0%'; return; }
+    if (eta == null) { $('eta').textContent = 'battle!'; $('bar').style.width = '100%'; return; }
+    $('eta').textContent = clock(eta / speed);
+    $('bar').style.width = Math.max(0, Math.min(100, 100 * (1 - eta / etaMax))) + '%';
+  }
+
+  function refresh() {
+    $('sYou').textContent = held.length;
+    $('sRiv').textContent = rv.held.length;
+    $('sStr').textContent = rv.strength.toFixed(1);
+    $('sDw').textContent = rv.dwellings;
+    view.setHeld(held);
+    view.setSelected(selected);
+    renderCard();
+    renderTimer();
+  }
+
+  function armyHtml(a) {
+    const pcs = a.pieces.slice().sort((p, q) => ORDER.indexOf(p.type) - ORDER.indexOf(q.type)).map(p => GLYPH[p.type]).join('');
+    return '<div class="army" aria-label="Rival army">' + pcs + '</div><p>' + esc(a.name) + ' &middot; tier ' + a.tier.toFixed(1) +
+      ' &middot; ' + a.units + ' pawn-units &middot; depth ' + a.depth + ' &middot; elo ' + a.elo + '</p>';
+  }
+
+  function renderCard() {
+    const box = $('card');
+    box.className = 'card';
+    if (rv.status === 'won') {
+      box.className = 'card alert';
+      box.innerHTML = '<h2>Your keep has fallen</h2><p>The rival lord holds the region. Start a new one to try again.</p><button class="primary" id="again" type="button">New region</button>';
+      $('again').onclick = generate; return;
+    }
+    if (rv.status === 'defeated') {
+      box.innerHTML = '<h2>Rival keep taken</h2><p>You stormed ' + esc(nodeName(region.citadelId)) + '. The region is yours.</p><button class="primary" id="again" type="button">New region</button>';
+      $('again').onclick = generate; return;
+    }
+    if (rv.pending) {
+      const id = rv.pending.nodeId, a = rivalArmyFor(rv, id, region);
+      box.className = 'card alert';
+      box.innerHTML = '<h2>' + (rv.pending.type === 'keepAssault' ? 'Keep assault' : 'Border battle') + ' <span class="tag rv">' + esc(nodeName(id)) + '</span></h2>' +
+        '<p>The rival waits for the outcome before it moves again. In the game this is a chess battle; here you pick it.</p>' +
+        armyHtml(a) + '<div class="pair"><button class="primary" id="bw" type="button">You win</button><button class="rival" id="bl" type="button">You lose</button></div>';
+      $('bw').onclick = () => resolvePending(true);
+      $('bl').onclick = () => resolvePending(false);
+      return;
+    }
+    if (attack != null) {
+      const a = rivalArmyFor(rv, attack, region);
+      box.className = 'card alert';
+      box.innerHTML = '<h2>Attack ' + esc(nodeName(attack)) + ' <span class="tag rv">rival ' + (attack === region.citadelId ? 'keep' : 'garrison') + '</span></h2>' +
+        armyHtml(a) + '<div class="pair"><button class="primary" id="aw" type="button">You win</button><button class="rival" id="al" type="button">You lose</button></div>';
+      $('aw').onclick = () => finishAttack(true);
+      $('al').onclick = () => finishAttack(false);
+      return;
+    }
+    if (selected != null) {
+      const n = region.nodes[selected];
+      const own = rivalOwners(rv, region, held)[selected];
+      const vis = visibility({ region, held })[selected];
+      if (vis === 'fog' && own !== 'rival') { box.innerHTML = '<h2>Unscouted</h2><p>Take a neighbouring node to scout it.</p>'; return; }
+      const tag = own === 'rival' ? '<span class="tag rv">rival</span>' : own === 'player' ? '<span class="tag">yours</span>' : '<span class="tag">tier ' + n.tier + '</span>';
+      box.innerHTML = '<h2>' + esc(n.name) + ' ' + tag + '</h2><p>' + TYPE[n.type] + ' &middot; tier ' + n.tier + '. ' +
+        (own === 'rival' ? 'Held by the rival. Attack it from a node next to it.' : own === 'player' ? 'Yours. The rival may march on it if your borders touch.' : 'Neutral.') + '</p>';
+      return;
+    }
+    box.innerHTML = '<h2>Two lords, one region</h2><p>You start in the west. The rival starts at ' + esc(nodeName(region.citadelId)) +
+      ' in the east and expands on its own clock: first move about 90 s in, slower as it grows. It prefers mines, then towns, then the road to your keep.</p>';
+  }
+
+  function resolvePending(playerWon) {
+    const p = rv.pending; if (!p) return;
+    rv = resolveBorder(rv, p.nodeId, playerWon);
+    if (playerWon) log('You held ' + nodeName(p.nodeId) + '. The rival falls back.', false);
+    else if (p.type === 'keepAssault') log('Your keep has fallen.', true);
+    else { held = held.filter(x => x !== p.nodeId); log('You lost ' + nodeName(p.nodeId) + ' to the rival.', true); }
+    const eta = nextMoveEta(rv); if (eta) etaMax = eta;
+    refresh();
+  }
+
+  function finishAttack(won) {
+    const id = attack; attack = null;
+    if (won) {
+      held = [...new Set([...held, id])].sort((a, b) => a - b);
+      log('You took ' + nodeName(id) + ' from the rival.', false);
+      step(0, true);
+    } else log('Your attack on ' + nodeName(id) + ' was thrown back.', false);
+    refresh();
+  }
+
+  function tap(id) {
+    if (rv.status !== 'active') return;
+    attack = null;
+    if (id == null) { selected = null; refresh(); return; }
+    selected = id;
+    const own = rivalOwners(rv, region, held)[id];
+    if (canCapture({ region, held }, id) && !rv.pending) {
+      if (own === 'rival') attack = id;
+      else { held = capture({ region, held }, id).held; log('You took ' + nodeName(id) + '.', false); }
+    }
+    refresh();
+  }
+
+  // rival territory overlay, drawn over the map view in the same coordinates
+  function drawOverlay(time) {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const dpr = Math.min(3, devicePixelRatio || 1);
+    if (over.width !== Math.round(w * dpr) || over.height !== Math.round(h * dpr)) {
+      over.width = Math.round(w * dpr); over.height = Math.round(h * dpr);
+      over.style.width = w + 'px'; over.style.height = h + 'px';
+    }
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    octx.clearRect(0, 0, w, h);
+    if (!region || !rv) return;
+    const sc = view.scale, ox = view.offsetX;
+    const sx = (x) => ox + (x + MAP_PAD) * sc, sy = (y) => (y + MAP_PAD) * sc;
+    const owners = rivalOwners(rv, region, held);
+    const R = region.nodes.filter(n => owners[n.id] === 'rival');
+    octx.fillStyle = rivalTint;
+    octx.beginPath();
+    for (const n of R) { octx.moveTo(sx(n.x) + 60 * sc, sy(n.y)); octx.arc(sx(n.x), sy(n.y), 60 * sc, 0, Math.PI * 2); }
+    octx.fill();
+    octx.strokeStyle = rivalColor; octx.lineWidth = 4; octx.lineCap = 'round';
+    for (const [a, b] of region.roads) {
+      if (owners[a] !== 'rival' || owners[b] !== 'rival') continue;
+      const A = region.nodes[a], B = region.nodes[b], c = mapRoadCurve(A, B);
+      octx.beginPath(); octx.moveTo(sx(A.x), sy(A.y)); octx.quadraticCurveTo(sx(c.cx), sy(c.cy), sx(B.x), sy(B.y)); octx.stroke();
+    }
+    for (const n of R) {
+      const r = mapBadgeRadius(n.type, 'held');
+      drawBadge(octx, n.type, sx(n.x), sy(n.y), r, palette, 'full');
+      octx.strokeStyle = rivalColor; octx.lineWidth = 3;
+      octx.beginPath(); octx.arc(sx(n.x), sy(n.y), r + 2.5, 0, Math.PI * 2); octx.stroke();
+      // pennant
+      const px = sx(n.x) + r * 0.55, py = sy(n.y) - r - 2;
+      octx.fillStyle = rivalColor; octx.beginPath(); octx.moveTo(px, py); octx.lineTo(px, py - 12); octx.lineTo(px + 9, py - 8.5); octx.lineTo(px + 1.5, py - 5); octx.closePath(); octx.fill();
+    }
+    const target = rv.pending ? rv.pending.nodeId : attack;
+    if (target != null) {
+      const n = region.nodes[target], r = mapBadgeRadius(n.type, 'held');
+      const pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(time / 260);
+      octx.strokeStyle = palette.danger; octx.lineWidth = 3; octx.setLineDash([5, 4]);
+      octx.beginPath(); octx.arc(sx(n.x), sy(n.y), r + 7 + pulse * 4, 0, Math.PI * 2); octx.stroke(); octx.setLineDash([]);
+    }
+  }
+  function frame(t) { drawOverlay(t || 0); requestAnimationFrame(frame); }
+
+  function setSpeed(s) { speed = s; $('x1').classList.toggle('on', s === 1); $('x60').classList.toggle('on', s === 60); renderTimer(); }
+  $('x1').addEventListener('click', () => setSpeed(1));
+  $('x60').addEventListener('click', () => setSpeed(60));
+  $('away').addEventListener('click', () => {
+    const before = rv.held.length;
+    log('You ride away for 8 hours...', false);
+    const evs = step(8 * 3600, false) || [];
+    const n = rv.held.length - before;
+    log('Back home. The rival gained ' + n + ' node' + (n === 1 ? '' : 's') + (evs.some(e => e.type === 'borderBattle') ? ' and waits at your border.' : '.'), false);
+    refresh();
+  });
+
+  function readColors() {
+    palette = mapPaletteFromCSS(document.documentElement);
+    const cs = getComputedStyle(document.documentElement);
+    rivalColor = cs.getPropertyValue('--rival').trim() || rivalColor;
+    rivalTint = cs.getPropertyValue('--rival-tint').trim() || rivalTint;
+    view.setPalette(palette);
+  }
+  const modes = ['auto', 'light', 'dark'];
+  let mode = 0;
+  try { const m = localStorage.getItem('cm-rival-theme'); if (modes.includes(m)) mode = modes.indexOf(m); } catch (_) {}
+  function applyTheme() {
+    const m = modes[mode];
+    if (m === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', m);
+    $('theme').textContent = 'Theme: ' + m;
+    try { localStorage.setItem('cm-rival-theme', m); } catch (_) {}
+    readColors();
+  }
+  $('theme').addEventListener('click', () => { mode = (mode + 1) % modes.length; applyTheme(); });
+  try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors); } catch (_) {}
+  $('regen').addEventListener('click', generate);
+  $('seed').addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(); });
+
+  applyTheme();
+  generate();
+  setInterval(tick, 250);
+  requestAnimationFrame(frame);
+})();
+</script>

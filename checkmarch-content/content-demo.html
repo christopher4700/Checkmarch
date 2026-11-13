@@ -1,0 +1,287 @@
+<title>Checkmarch Content Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#f6f1e7; --panel:#fffaf1; --panel2:#efe6d6; --fg:#2b241c; --muted:#6f6352; --line:#ddd0bb;
+  --accent:#7a4e1f; --accent-soft:#f0dfc6; --danger:#b3261e; --good:#2f6b3a;
+  --sq-light:#efe2c8; --sq-dark:#b48a5f; --sq-off:#e4dccd; --sq-off2:#d6cbb8;
+  --piece-player:#fbf6ea; --piece-enemy:#2a1f17; --piece-outline:#2a1f17; --piece-accent:#e0a44a;
+  --chip:#efe6d6; --chip-fg:#4a3e30;
+  --agg:#b3261e; --sol:#2f5e8a; --mat:#8a6a12;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#171a20; --panel:#20242c; --panel2:#2a2f39; --fg:#e7e9ee; --muted:#9aa2b1; --line:#353b47;
+  --accent:#e0b878; --accent-soft:#3a3326; --danger:#ff6b5e; --good:#7fc48a;
+  --sq-light:#9aa6b8; --sq-dark:#56627a; --sq-off:#2b313c; --sq-off2:#252a33;
+  --piece-player:#f4f1ea; --piece-enemy:#11141a; --piece-outline:#0b0d11; --piece-accent:#f0c070;
+  --chip:#2a2f39; --chip-fg:#cfd5e0;
+  --agg:#ff7a6e; --sol:#7fb2e6; --mat:#e0c060;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#171a20; --panel:#20242c; --panel2:#2a2f39; --fg:#e7e9ee; --muted:#9aa2b1; --line:#353b47;
+  --accent:#e0b878; --accent-soft:#3a3326; --danger:#ff6b5e; --good:#7fc48a;
+  --sq-light:#9aa6b8; --sq-dark:#56627a; --sq-off:#2b313c; --sq-off2:#252a33;
+  --piece-player:#f4f1ea; --piece-enemy:#11141a; --piece-outline:#0b0d11; --piece-accent:#f0c070;
+  --chip:#2a2f39; --chip-fg:#cfd5e0;
+  --agg:#ff7a6e; --sol:#7fb2e6; --mat:#e0c060;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px}
+.wrap{max-width:880px;margin:0 auto}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 10px}
+h1{font-size:22px;margin:0;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:13px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px;position:sticky;top:0;background:var(--bg);padding:6px 0;z-index:2}
+nav button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+nav button .n{font-variant-numeric:tabular-nums;opacity:.75;margin-left:4px;font-size:12px}
+.tools{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.tools button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
+.tools button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.card h3{margin:0 0 2px;font-size:15px}
+.meta{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.opt{margin-top:8px;padding:8px;border-radius:8px;background:var(--panel2)}
+.opt .lab{font-weight:600}
+.opt .ab{display:inline-block;width:18px;font-weight:700;color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.chip{background:var(--chip);color:var(--chip-fg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.val{float:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.doc{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.doc.aggressive{color:var(--agg)} .doc.solid{color:var(--sol)} .doc.material{color:var(--mat)}
+.taunt{font-style:italic;margin:6px 0 4px}
+.note{color:var(--muted);font-size:13px}
+.board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;max-width:220px;aspect-ratio:1;border-radius:6px;overflow:hidden;margin:8px auto 6px;border:1px solid var(--line)}
+.sq{display:flex;align-items:center;justify-content:center;font-size:clamp(14px,5.4vw,22px);line-height:1;position:relative}
+.sq.l{background:var(--sq-light)} .sq.d{background:var(--sq-dark)}
+.sq.off.l{background:var(--sq-off)} .sq.off.d{background:var(--sq-off2)}
+.sq .pc{color:var(--piece-enemy);text-shadow:0 1px 1px rgba(0,0,0,.18)}
+.sq .ord{position:absolute;right:1px;bottom:0;font-size:8px;color:var(--fg);opacity:.55;font-variant-numeric:tabular-nums}
+.sq.k{box-shadow:inset 0 0 0 2px var(--accent)}
+.legend{font-size:12px;color:var(--muted);text-align:center}
+.sets .row{display:flex;gap:6px;justify-content:center;font-size:30px;line-height:1.1;padding:8px 4px;border-radius:8px;background:var(--sq-dark);margin-top:6px}
+.sets .row.e{background:var(--sq-light)}
+.sets .g{color:var(--piece-player)}
+.sets .row.e .g{color:var(--piece-enemy)}
+ul.lines{margin:6px 0 0;padding-left:18px} ul.lines li{margin:3px 0}
+ul.lines .ph{color:var(--accent);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);font-weight:600}
+td code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sec h2{font-size:16px;margin:16px 0 6px;text-transform:capitalize}
+.hidden{display:none}
+@media (prefers-reduced-motion: no-preference){ nav button,.tools button{transition:background .15s,border-color .15s} }
+</style>
+<div class="wrap">
+  <header>
+    <h1>Checkmarch Content Pack</h1>
+    <span class="sub" id="summary"></span>
+  </header>
+  <nav id="tabs" role="tablist"></nav>
+  <main id="view"></main>
+</div>
+<script>
+const DATA = {"version":1,"shrines":[{"id":"mossy-altar","name":"The Mossy Altar","minRegion":1,"a":{"label":"Knight one pawn for good","effect":{"kind":"promotePawn","to":"N"},"value":80},"b":{"label":"+20% mine income for the rest of this region","effect":{"kind":"mineIncomeMult","v":1.2,"scope":"region"},"value":80}},{"id":"tithe-box","name":"The Tithe Box","minRegion":1,"a":{"label":"Empty the box: +60 gold","effect":{"kind":"gold","v":60},"value":60},"b":{"label":"Leave it full: +2 gold/min this region","effect":{"kind":"incomeFlat","v":2,"scope":"region"},"value":60}},{"id":"drill-yard","name":"The Old Drill Yard","minRegion":1,"a":{"label":"Clear the ground: +1 formation square","effect":{"kind":"squares","v":1},"value":120},"b":{"label":"Drill the pawns: Stubborn +2 this region","effect":{"kind":"trait","piece":"P","v":2,"scope":"region"},"value":128}},{"id":"beggar-oracle","name":"The Beggar Oracle","minRegion":1,"a":{"label":"Pay 50 gold: lift the fog 2 roads around","effect":{"kind":"combo","parts":[{"kind":"gold","v":-50},{"kind":"reveal","v":2}]},"value":70},"b":{"label":"Share your bread: next raid 120 ticks later","effect":{"kind":"raidClock","v":120},"value":96}},{"id":"twin-wells","name":"The Twin Wells","minRegion":1,"a":{"label":"Drink the clear well: +60 Tactician elo next battle","effect":{"kind":"tacticianElo","v":60,"scope":"next"},"value":60},"b":{"label":"Drink the dark well: +25% loot next battle","effect":{"kind":"lootMult","v":1.25,"scope":"next"},"value":50}},{"id":"hermit-smith","name":"The Hermit Smith","minRegion":1,"a":{"label":"Take his spare iron bar","effect":{"kind":"bar","material":"iron","v":1},"value":150},"b":{"label":"Take a sack of coal (8)","effect":{"kind":"resource","res":"coal","v":8},"value":96}},{"id":"pilgrim-band","name":"Pilgrims on the Road","minRegion":1,"a":{"label":"Recruit a pilgrim: +1 pawn","effect":{"kind":"addPiece","piece":"P","v":1},"value":40},"b":{"label":"Ask for alms: +40 gold","effect":{"kind":"gold","v":40},"value":40}},{"id":"cracked-bell","name":"The Cracked Bell","minRegion":2,"a":{"label":"Ring it: rival stalls 480 ticks, raids 120 sooner","effect":{"kind":"combo","parts":[{"kind":"rivalClock","v":480},{"kind":"raidClock","v":-120}]},"value":230},"b":{"label":"Muffle it: next raid 180 ticks later","effect":{"kind":"raidClock","v":180},"value":230}},{"id":"bone-dice","name":"The Bone Dice","minRegion":2,"a":{"label":"Wager 100 gold: +40% loot this region","effect":{"kind":"combo","parts":[{"kind":"gold","v":-100},{"kind":"lootMult","v":1.4,"scope":"region"}]},"value":220},"b":{"label":"Pocket the dice: +150 gold","effect":{"kind":"gold","v":150},"value":150}},{"id":"grey-mentor","name":"The Grey Mentor","minRegion":2,"a":{"label":"Study the old games: +50 Tactician elo this run","effect":{"kind":"tacticianElo","v":50,"scope":"run"},"value":320},"b":{"label":"Spar in the yard: Sidestep +1 knights this run","effect":{"kind":"trait","piece":"N","v":1,"scope":"run"},"value":320}},{"id":"salt-merchant","name":"The Salt Merchant","minRegion":2,"a":{"label":"Trade fairly: 15% off the shop this region","effect":{"kind":"shopDiscount","v":0.15,"scope":"region"},"value":192},"b":{"label":"Rob him: +300 gold, enemies +20 elo this region","effect":{"kind":"combo","parts":[{"kind":"gold","v":300},{"kind":"enemyElo","v":20,"scope":"region"}]},"value":204}},{"id":"sunken-chapel","name":"The Sunken Chapel","minRegion":2,"a":{"label":"Anoint a pawn: it becomes a bishop","effect":{"kind":"promotePawn","to":"B"},"value":128},"b":{"label":"Pray in the flood: Faith +1 bishops this region","effect":{"kind":"trait","piece":"B","v":1,"scope":"region"},"value":128}},{"id":"crossroads-gibbet","name":"The Crossroads Gibbet","minRegion":2,"a":{"label":"Cut down the rival's spy: rival strength -1","effect":{"kind":"rivalStrength","v":-1},"value":240},"b":{"label":"Search his pockets: +200 gold","effect":{"kind":"gold","v":200},"value":200}},{"id":"war-drum","name":"The Buried War Drum","minRegion":3,"a":{"label":"Beat it: enemy armies -10% this region","effect":{"kind":"enemyBudgetMult","v":0.9,"scope":"region"},"value":384},"b":{"label":"Sell the skin and frame: +350 gold","effect":{"kind":"gold","v":350},"value":350}},{"id":"molten-spring","name":"The Molten Spring","minRegion":3,"a":{"label":"Quench a blade here: +1 steel bar","effect":{"kind":"bar","material":"steel","v":1},"value":400},"b":{"label":"Pick the cooled glass: +10 obsidian shards","effect":{"kind":"resource","res":"shards","v":10},"value":350}},{"id":"knights-barrow","name":"The Knight's Barrow","minRegion":3,"a":{"label":"Wake the sleeper: +1 knight","effect":{"kind":"addPiece","piece":"N","v":1},"value":307},"b":{"label":"Leave a pawn: Sidestep +2 knights this region","effect":{"kind":"combo","parts":[{"kind":"losePiece","piece":"P","v":1},{"kind":"trait","piece":"N","v":2,"scope":"region"}]},"value":307}},{"id":"mirror-pool","name":"The Mirror Pool","minRegion":3,"a":{"label":"Gaze in: lift the fog 3 roads, raids 90 sooner","effect":{"kind":"combo","parts":[{"kind":"reveal","v":3},{"kind":"raidClock","v":-90}]},"value":276},"b":{"label":"Look away: +30 Tactician elo this region","effect":{"kind":"tacticianElo","v":30,"scope":"region"},"value":230}},{"id":"iron-oath","name":"The Iron Oath","minRegion":3,"a":{"label":"Swear it: Bulwark +1 rooks this run","effect":{"kind":"trait","piece":"R","v":1,"scope":"run"},"value":614},"b":{"label":"Refuse and dig in: +2 formation squares","effect":{"kind":"squares","v":2},"value":614}},{"id":"quiet-abbey","name":"The Quiet Abbey","minRegion":3,"a":{"label":"Take vows: +2 Memories when this run ends","effect":{"kind":"memoriesOnEnd","v":2},"value":500},"b":{"label":"Fill the larder: +5 gold/min this run","effect":{"kind":"incomeFlat","v":5,"scope":"run"},"value":450}},{"id":"red-banner","name":"The Red Banner","minRegion":4,"a":{"label":"Raise it: march 35% faster this region","effect":{"kind":"marchMult","v":0.65,"scope":"region"},"value":860},"b":{"label":"Burn it: the rival's scouts stall 300 ticks","effect":{"kind":"rivalClock","v":300},"value":614}},{"id":"queens-cradle","name":"The Queen's Cradle","minRegion":4,"a":{"label":"Crown a pawn queen; a knight stays as warden","effect":{"kind":"combo","parts":[{"kind":"promotePawn","to":"Q"},{"kind":"losePiece","piece":"N","v":1}]},"value":819},"b":{"label":"Rest the army: +60% mine income this region","effect":{"kind":"mineIncomeMult","v":1.6,"scope":"region"},"value":983}},{"id":"gravekeeper","name":"The Gravekeeper","minRegion":4,"a":{"label":"Pay 300 gold: +3 Memories when this run ends","effect":{"kind":"combo","parts":[{"kind":"gold","v":-300},{"kind":"memoriesOnEnd","v":3}]},"value":450},"b":{"label":"Take his lantern: +40 Tactician elo this region","effect":{"kind":"tacticianElo","v":40,"scope":"region"},"value":492}},{"id":"ember-forge","name":"The Ember Forge","minRegion":4,"a":{"label":"Stoke it: +1 obsidian bar, but the rival grows","effect":{"kind":"combo","parts":[{"kind":"bar","material":"obsidian","v":1},{"kind":"rivalStrength","v":1}]},"value":286},"b":{"label":"Rake the slag: +12 iron ore","effect":{"kind":"resource","res":"iron","v":12},"value":216}},{"id":"masked-envoy","name":"The Masked Envoy","minRegion":5,"a":{"label":"Parley: the rival stalls 300 ticks","effect":{"kind":"rivalClock","v":300},"value":983},"b":{"label":"Unmask him: enemies -50 elo this region","effect":{"kind":"enemyElo","v":-50,"scope":"region"},"value":983}},{"id":"cursed-hoard","name":"The Cursed Hoard","minRegion":5,"a":{"label":"Take it: +900 gold, enemy pawns Stubborn +1","effect":{"kind":"combo","parts":[{"kind":"gold","v":900},{"kind":"enemyTrait","piece":"P","v":1,"scope":"region"}]},"value":564},"b":{"label":"Seal it: +10% loot this region","effect":{"kind":"lootMult","v":1.1,"scope":"region"},"value":328}},{"id":"star-chart","name":"The Star Chart","minRegion":5,"a":{"label":"Read it: +80 Tactician elo next battle","effect":{"kind":"tacticianElo","v":80,"scope":"next"},"value":524},"b":{"label":"Sell it: 10% off the shop this region","effect":{"kind":"shopDiscount","v":0.1,"scope":"region"},"value":524}},{"id":"warden-statue","name":"The Warden's Statue","minRegion":6,"a":{"label":"Kneel: Majesty +1 queens this run","effect":{"kind":"trait","piece":"Q","v":1,"scope":"run"},"value":3146},"b":{"label":"Topple it: enemy armies -15% this region","effect":{"kind":"enemyBudgetMult","v":0.85,"scope":"region"},"value":2359}},{"id":"last-ferry","name":"The Last Ferry","minRegion":6,"a":{"label":"Pay the ferryman 2 pawns: a rook comes ashore","effect":{"kind":"combo","parts":[{"kind":"losePiece","piece":"P","v":2},{"kind":"addPiece","piece":"R","v":1}]},"value":1258},"b":{"label":"Burn the ferry: next raid 200 ticks later","effect":{"kind":"raidClock","v":200},"value":1678}}],"lords":[{"id":"vasha","name":"Vasha Emberline","epithet":"the Cinder Wolf","doctrine":"aggressive","favoredPieces":["N","Q"],"taunt":"Your fences are kindling. I brought the spark.","personalityNote":"Opens with knight raids; spends its own king safety for tempo.","formations":["Cinder Hounds","Ember Raid","Wolf Pack","Hook and Fang","Singing Lances","Eastern Crown"]},{"id":"oldric","name":"Oldric Fenhallow","epithet":"Warden of the Reeds","doctrine":"solid","favoredPieces":["P","R"],"taunt":"Forty winters I have held this marsh. Knock, if you like.","personalityNote":"Pawn chains and doubled rooks; waits for you to overreach.","formations":["Reed Palisade","Shepherd's Line","Marsh Gate","Bell Tower","Still Water","Hearthwall","Cloister","Greyveil Keep"]},{"id":"mirelle","name":"Mirelle Quillsworth","epithet":"the Ledger Queen","doctrine":"material","favoredPieces":["B","Q"],"taunt":"Every piece you own has a price. I keep the receipts.","personalityNote":"Counts every trade; will take a loose pawn over a mating net.","formations":["Ledger Lines","Counting House","Bone Market","Tidepool Hoard","Crow's Tally","Grand Bazaar"]},{"id":"tadd","name":"Tadd Brakemoor","epithet":"the Gristle Baron","doctrine":"aggressive","favoredPieces":["R","P"],"taunt":"I do not knock on gates. I eat them.","personalityNote":"Rolls a pawn storm behind rook files; crude but relentless.","formations":["First Sparks","Cinder Hounds","Spiked Column","Powder Trail","Siege Ladder","Eastern Crown"]},{"id":"seravine","name":"Seravine Ashgrove","epithet":"the Pale Bell","doctrine":"solid","favoredPieces":["B","P"],"taunt":"When the bell tolls twice, you will already be walking home.","personalityNote":"Long bishops behind a closed centre; strikes late.","formations":["Reed Palisade","Shepherd's Line","Marsh Gate","Bell Tower","Hearthwall","Cloister","Abbey Choir","Greyveil Keep"]},{"id":"kroll","name":"Kroll Underbridge","epithet":"the Toll-Taker","doctrine":"material","favoredPieces":["N","P"],"taunt":"Crossing costs a pawn. Arguing costs two.","personalityNote":"Forks for profit; trades down the moment it is ahead.","formations":["Toll Booth","Scout's Tithe","Tidepool Hoard","Grand Bazaar"]},{"id":"ilsabet","name":"Ilsabet Thornquay","epithet":"Mistress of Hooks","doctrine":"aggressive","favoredPieces":["B","N"],"taunt":"Every square near your king has a hook in it. Mind your step.","personalityNote":"Minor-piece swarms aimed at one flank; hates slow games.","formations":["Cinder Hounds","Ember Raid","Wolf Pack","Hook and Fang","Singing Lances","Powder Trail"]},{"id":"gorran","name":"Gorran Stillwater","epithet":"the Unhurried","doctrine":"solid","favoredPieces":["R","Q"],"taunt":"Take your time. I have more of it than you.","personalityNote":"Heavy pieces held back; punishes any loose king.","formations":["Marsh Gate","Still Water","Cloister","Greyveil Keep"]},{"id":"pellam","name":"Pellam Rookhollow","epithet":"the Counting Crow","doctrine":"material","favoredPieces":["R","B"],"taunt":"Caw. That is one. Caw. That is two. Shall I keep counting?","personalityNote":"Open files and long diagonals; collects stragglers.","formations":["Ledger Lines","Counting House","Bone Market","Tidepool Hoard","Crow's Tally"]},{"id":"yvaine","name":"Yvaine of the Ninth Ford","epithet":"the Lance That Sings","doctrine":"aggressive","favoredPieces":["Q","N"],"taunt":"Sing with me. The song is short and ends at your keep.","personalityNote":"Early queen sorties with knight support; overextends gladly.","formations":["Cinder Hounds","Ember Raid","Wolf Pack","Hook and Fang","Singing Lances","Eastern Crown"]},{"id":"brannoch","name":"Brannoch Hearthstone","epithet":"the Iron Hearth","doctrine":"solid","favoredPieces":["P","N"],"taunt":"My hearth has never gone cold. Come warm your hands, briefly.","personalityNote":"Hedgehog pawns with knights tucked behind; counterpunches.","formations":["Reed Palisade","Shepherd's Line","Marsh Gate","Bell Tower","Hearthwall","Abbey Choir"]},{"id":"oskeline","name":"Oskeline Marrowgate","epithet":"the Bone Broker","doctrine":"material","favoredPieces":["Q","R"],"taunt":"I buy bones. Yours look sturdy. I will pay well.","personalityNote":"Fields extra heavy pieces; grabs material even under attack.","formations":["Ledger Lines","Counting House","Bone Market","Crow's Tally","Grand Bazaar"]},{"id":"dace","name":"Dace Wyrmwood","epithet":"the Grinning Fuse","doctrine":"aggressive","favoredPieces":["P","B"],"taunt":"Hear that hiss? That is the fuse. Run, or do not.","personalityNote":"Advanced pawns lit by bishops; burns out if the storm stalls.","formations":["First Sparks","Cinder Hounds","Spiked Column","Hook and Fang","Powder Trail","Siege Ladder"]},{"id":"hollis","name":"Abbess Hollis Greyveil","epithet":"Keeper of the Quiet Walls","doctrine":"solid","favoredPieces":["B","R"],"taunt":"Silence, please. You may shout once you are inside. You will not be.","personalityNote":"Fianchettoed bishops and castled rooks; patient to a fault.","formations":["Marsh Gate","Bell Tower","Still Water","Cloister","Abbey Choir","Greyveil Keep"]},{"id":"fenwick","name":"Fenwick Saltmarrow","epithet":"the Hoarder of Tides","doctrine":"material","favoredPieces":["P","B"],"taunt":"The tide takes everything eventually. I simply arrive first.","personalityNote":"A wide pawn tide that swallows loose pieces; slow to finish.","formations":["Toll Booth","Scout's Tithe","Ledger Lines","Counting House","Tidepool Hoard","Crow's Tally"]},{"id":"aurelan","name":"Aurelan Duskmere","epithet":"Crown of the Eastern March","doctrine":"aggressive","favoredPieces":["Q","R"],"taunt":"The east was mine before your grandsire learned to stand.","personalityNote":"The old lord of the march: doubled queens and rooks, all in.","formations":["Wolf Pack","Spiked Column","Singing Lances","Siege Ladder","Eastern Crown"]}],"formations":[{"id":"first-sparks","name":"First Sparks","doctrine":"aggressive","favored":["P"],"budget":3,"tiers":[2,3],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"P","square":"d6"},{"type":"P","square":"e6"},{"type":"P","square":"f6"}]},{"id":"cinder-hounds","name":"Cinder Hounds","doctrine":"aggressive","favored":["N","P"],"budget":8,"tiers":[4,10],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"N","square":"c6"},{"type":"N","square":"f6"},{"type":"P","square":"d6"},{"type":"P","square":"e6"}]},{"id":"ember-raid","name":"Ember Raid","doctrine":"aggressive","favored":["N"],"budget":5,"tiers":[3,5],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"N","square":"f6"},{"type":"P","square":"e7"},{"type":"P","square":"d7"}]},{"id":"wolf-pack","name":"Wolf Pack","doctrine":"aggressive","favored":["N","Q"],"budget":19,"tiers":[13,30],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"N","square":"c6"},{"type":"N","square":"f6"},{"type":"Q","square":"d8"},{"type":"P","square":"e6"},{"type":"P","square":"d6"},{"type":"P","square":"f7"},{"type":"P","square":"c7"}]},{"id":"spiked-column","name":"Spiked Column","doctrine":"aggressive","favored":["R","P"],"budget":16,"tiers":[9,26],"citadel":false,"pieces":[{"type":"K","square":"g8"},{"type":"P","square":"e5"},{"type":"P","square":"d5"},{"type":"R","square":"e8"},{"type":"R","square":"d8"},{"type":"P","square":"f6"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"P","square":"c6"}]},{"id":"hook-and-fang","name":"Hook and Fang","doctrine":"aggressive","favored":["B","N"],"budget":16,"tiers":[9,26],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"B","square":"c5"},{"type":"B","square":"f5"},{"type":"N","square":"c6"},{"type":"N","square":"g6"},{"type":"P","square":"e6"},{"type":"P","square":"d6"},{"type":"P","square":"f7"},{"type":"P","square":"b7"}]},{"id":"singing-lances","name":"Singing Lances","doctrine":"aggressive","favored":["Q","N"],"budget":29,"tiers":[23,39],"citadel":false,"pieces":[{"type":"K","square":"d8"},{"type":"Q","square":"e6"},{"type":"N","square":"c5"},{"type":"N","square":"f5"},{"type":"N","square":"b6"},{"type":"P","square":"d6"},{"type":"P","square":"e7"},{"type":"P","square":"c7"},{"type":"P","square":"f7"},{"type":"R","square":"a8"},{"type":"P","square":"g7"},{"type":"P","square":"b7"}]},{"id":"powder-trail","name":"Powder Trail","doctrine":"aggressive","favored":["P","B"],"budget":14,"tiers":[7,23],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"B","square":"d6"},{"type":"B","square":"e6"},{"type":"P","square":"a5"},{"type":"P","square":"b5"},{"type":"P","square":"c5"},{"type":"P","square":"f5"},{"type":"P","square":"g5"},{"type":"P","square":"h5"},{"type":"P","square":"d7"},{"type":"P","square":"e7"}]},{"id":"siege-ladder","name":"Siege Ladder","doctrine":"aggressive","favored":["R","P"],"budget":37,"tiers":[28,45],"citadel":false,"pieces":[{"type":"K","square":"g8"},{"type":"R","square":"e5"},{"type":"R","square":"d5"},{"type":"P","square":"e6"},{"type":"P","square":"d6"},{"type":"Q","square":"e7"},{"type":"R","square":"f8"},{"type":"P","square":"c5"},{"type":"P","square":"f5"},{"type":"N","square":"c6"},{"type":"B","square":"b7"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"P","square":"f7"}]},{"id":"eastern-crown","name":"Eastern Crown","doctrine":"aggressive","favored":["Q","R"],"budget":39,"tiers":[25,42],"citadel":true,"pieces":[{"type":"K","square":"g8"},{"type":"Q","square":"d8"},{"type":"Q","square":"e7"},{"type":"R","square":"a8"},{"type":"R","square":"f8"},{"type":"N","square":"d7"},{"type":"B","square":"e6"},{"type":"P","square":"f7"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"P","square":"d6"},{"type":"P","square":"c7"}]},{"id":"reed-palisade","name":"Reed Palisade","doctrine":"solid","favored":["P"],"budget":4,"tiers":[3,4],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"P","square":"d7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"},{"type":"P","square":"c7"}]},{"id":"shepherds-line","name":"Shepherd's Line","doctrine":"solid","favored":["P"],"budget":3,"tiers":[2,3],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"P","square":"c6"},{"type":"P","square":"d6"},{"type":"P","square":"e6"}]},{"id":"marsh-gate","name":"Marsh Gate","doctrine":"solid","favored":["P","R"],"budget":16,"tiers":[9,26],"citadel":false,"pieces":[{"type":"K","square":"g8"},{"type":"P","square":"f7"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"R","square":"e8"},{"type":"R","square":"d8"},{"type":"P","square":"e6"},{"type":"P","square":"d6"},{"type":"P","square":"c6"}]},{"id":"bell-tower","name":"Bell Tower","doctrine":"solid","favored":["B","P"],"budget":12,"tiers":[6,19],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"P","square":"d6"},{"type":"P","square":"e6"},{"type":"B","square":"d7"},{"type":"B","square":"e7"},{"type":"P","square":"c7"},{"type":"P","square":"f7"},{"type":"P","square":"b7"},{"type":"P","square":"g7"}]},{"id":"still-water","name":"Still Water","doctrine":"solid","favored":["R","Q"],"budget":28,"tiers":[22,39],"citadel":false,"pieces":[{"type":"K","square":"g8"},{"type":"P","square":"f7"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"R","square":"d8"},{"type":"R","square":"e8"},{"type":"Q","square":"c7"},{"type":"P","square":"e6"},{"type":"P","square":"d6"},{"type":"P","square":"c6"},{"type":"B","square":"b7"}]},{"id":"hearthwall","name":"Hearthwall","doctrine":"solid","favored":["P","N"],"budget":14,"tiers":[7,23],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"P","square":"d6"},{"type":"P","square":"e6"},{"type":"P","square":"f6"},{"type":"P","square":"c6"},{"type":"N","square":"d7"},{"type":"N","square":"e7"},{"type":"P","square":"b7"},{"type":"P","square":"g7"},{"type":"P","square":"a7"},{"type":"P","square":"h7"}]},{"id":"cloister","name":"Cloister","doctrine":"solid","favored":["B","R"],"budget":22,"tiers":[16,33],"citadel":false,"pieces":[{"type":"K","square":"g8"},{"type":"P","square":"f7"},{"type":"P","square":"g6"},{"type":"P","square":"h7"},{"type":"B","square":"g7"},{"type":"R","square":"e8"},{"type":"R","square":"d8"},{"type":"B","square":"b7"},{"type":"P","square":"c6"},{"type":"P","square":"d6"},{"type":"P","square":"e7"}]},{"id":"abbey-choir","name":"Abbey Choir","doctrine":"solid","favored":["B","N"],"budget":22,"tiers":[12,29],"citadel":true,"pieces":[{"type":"K","square":"e8"},{"type":"P","square":"d7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"},{"type":"B","square":"d6"},{"type":"B","square":"e6"},{"type":"N","square":"c6"},{"type":"N","square":"f6"},{"type":"P","square":"c7"},{"type":"P","square":"g7"},{"type":"R","square":"h8"}]},{"id":"greyveil-keep","name":"Greyveil Keep","doctrine":"solid","favored":["B","R"],"budget":39,"tiers":[25,42],"citadel":true,"pieces":[{"type":"K","square":"g8"},{"type":"P","square":"f7"},{"type":"P","square":"g6"},{"type":"P","square":"h7"},{"type":"B","square":"g7"},{"type":"R","square":"f8"},{"type":"R","square":"e8"},{"type":"B","square":"b7"},{"type":"Q","square":"d8"},{"type":"N","square":"d7"},{"type":"N","square":"c7"},{"type":"P","square":"c6"},{"type":"P","square":"d6"},{"type":"P","square":"e6"},{"type":"P","square":"b6"},{"type":"P","square":"a7"}]},{"id":"toll-booth","name":"Toll Booth","doctrine":"material","favored":["N","P"],"budget":6,"tiers":[4,5],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"N","square":"c6"},{"type":"P","square":"d7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"}]},{"id":"scouts-tithe","name":"Scout's Tithe","doctrine":"material","favored":["N","P"],"budget":7,"tiers":[4,7],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"N","square":"d6"},{"type":"P","square":"c7"},{"type":"P","square":"d7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"}]},{"id":"ledger-lines","name":"Ledger Lines","doctrine":"material","favored":["B","Q"],"budget":19,"tiers":[13,30],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"Q","square":"d7"},{"type":"B","square":"c6"},{"type":"B","square":"f6"},{"type":"P","square":"c7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"},{"type":"P","square":"b7"}]},{"id":"counting-house","name":"Counting House","doctrine":"material","favored":["R","B"],"budget":22,"tiers":[16,33],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"R","square":"a8"},{"type":"R","square":"h8"},{"type":"B","square":"c8"},{"type":"B","square":"f8"},{"type":"P","square":"b7"},{"type":"P","square":"c7"},{"type":"P","square":"d7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"},{"type":"P","square":"g7"}]},{"id":"bone-market","name":"Bone Market","doctrine":"material","favored":["Q","R"],"budget":37,"tiers":[28,45],"citadel":false,"pieces":[{"type":"K","square":"e8"},{"type":"Q","square":"d8"},{"type":"Q","square":"c7"},{"type":"R","square":"a8"},{"type":"R","square":"f8"},{"type":"N","square":"c6"},{"type":"P","square":"d7"},{"type":"P","square":"e7"},{"type":"P","square":"f7"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"P","square":"b7"}]},{"id":"tidepool-hoard","name":"Tidepool Hoard","doctrine":"material","favored":["P","B"],"budget":14,"tiers":[7,23],"citadel":false,"pieces":[{"type":"K","square":"f8"},{"type":"B","square":"d7"},{"type":"B","square":"e7"},{"type":"P","square":"a6"},{"type":"P","square":"b6"},{"type":"P","square":"c6"},{"type":"P","square":"d6"},{"type":"P","square":"e6"},{"type":"P","square":"f6"},{"type":"P","square":"g6"},{"type":"P","square":"h6"}]},{"id":"crows-tally","name":"Crow's Tally","doctrine":"material","favored":["R","B"],"budget":21,"tiers":[15,32],"citadel":false,"pieces":[{"type":"K","square":"h8"},{"type":"R","square":"f8"},{"type":"R","square":"e8"},{"type":"B","square":"b7"},{"type":"B","square":"d6"},{"type":"P","square":"g7"},{"type":"P","square":"h7"},{"type":"P","square":"c6"},{"type":"P","square":"e6"},{"type":"P","square":"f7"}]},{"id":"grand-bazaar","name":"Grand Bazaar","doctrine":"material","favored":["Q","N"],"budget":50,"tiers":[31,48],"citadel":true,"pieces":[{"type":"K","square":"e8"},{"type":"Q","square":"d8"},{"type":"Q","square":"e7"},{"type":"R","square":"a8"},{"type":"R","square":"h8"},{"type":"N","square":"b8"},{"type":"N","square":"g8"},{"type":"N","square":"d6"},{"type":"B","square":"c8"},{"type":"B","square":"f8"},{"type":"P","square":"a7"},{"type":"P","square":"b7"},{"type":"P","square":"c7"},{"type":"P","square":"d7"},{"type":"P","square":"f7"},{"type":"P","square":"g7"},{"type":"P","square":"h7"}]}],"pieceSets":[{"id":"classic","name":"Classic","unlockedBy":{"kind":"default"},"glyphWeight":400,"player":{"hue":0,"light":0},"enemy":{"hue":0,"light":0},"outline":"none","css":{"--pc-weight":"400","--pc-player-hue":"0deg","--pc-player-light":"0%","--pc-enemy-hue":"0deg","--pc-enemy-light":"0%","--pc-outline":"none"}},{"id":"walnut-court","name":"Walnut Court","unlockedBy":{"kind":"region","v":2},"glyphWeight":600,"player":{"hue":18,"light":-6},"enemy":{"hue":-10,"light":-4},"outline":"hairline","css":{"--pc-weight":"600","--pc-player-hue":"18deg","--pc-player-light":"-6%","--pc-enemy-hue":"-10deg","--pc-enemy-light":"-4%","--pc-outline":"0 0 1px var(--piece-outline)"}},{"id":"moonlit-vigil","name":"Moonlit Vigil","unlockedBy":{"kind":"memories","v":25},"glyphWeight":300,"player":{"hue":-150,"light":8},"enemy":{"hue":40,"light":-8},"outline":"glow","css":{"--pc-weight":"300","--pc-player-hue":"-150deg","--pc-player-light":"8%","--pc-enemy-hue":"40deg","--pc-enemy-light":"-8%","--pc-outline":"0 0 6px var(--piece-accent)"}},{"id":"ember-guard","name":"Ember Guard","unlockedBy":{"kind":"region","v":3},"glyphWeight":700,"player":{"hue":25,"light":4},"enemy":{"hue":-30,"light":-10},"outline":"ink","css":{"--pc-weight":"700","--pc-player-hue":"25deg","--pc-player-light":"4%","--pc-enemy-hue":"-30deg","--pc-enemy-light":"-10%","--pc-outline":"1px 0 0 var(--piece-outline), -1px 0 0 var(--piece-outline), 0 1px 0 var(--piece-outline), 0 -1px 0 var(--piece-outline)"}},{"id":"verdigris","name":"Verdigris","unlockedBy":{"kind":"forge","material":"steel"},"glyphWeight":500,"player":{"hue":120,"light":-2},"enemy":{"hue":160,"light":-12},"outline":"hairline","css":{"--pc-weight":"500","--pc-player-hue":"120deg","--pc-player-light":"-2%","--pc-enemy-hue":"160deg","--pc-enemy-light":"-12%","--pc-outline":"0 0 1px var(--piece-outline)"}},{"id":"obsidian-order","name":"Obsidian Order","unlockedBy":{"kind":"forge","material":"obsidian"},"glyphWeight":800,"player":{"hue":-60,"light":-14},"enemy":{"hue":170,"light":-18},"outline":"ink","css":{"--pc-weight":"800","--pc-player-hue":"-60deg","--pc-player-light":"-14%","--pc-enemy-hue":"170deg","--pc-enemy-light":"-18%","--pc-outline":"1px 0 0 var(--piece-outline), -1px 0 0 var(--piece-outline), 0 1px 0 var(--piece-outline), 0 -1px 0 var(--piece-outline)"}},{"id":"heraldic","name":"Heraldic","unlockedBy":{"kind":"citadels","v":5},"glyphWeight":900,"player":{"hue":45,"light":6},"enemy":{"hue":-90,"light":0},"outline":"double","css":{"--pc-weight":"900","--pc-player-hue":"45deg","--pc-player-light":"6%","--pc-enemy-hue":"-90deg","--pc-enemy-light":"0%","--pc-outline":"0 0 0 var(--piece-outline), 0 0 2px var(--piece-outline), 0 0 4px var(--piece-accent)"}},{"id":"ghostlight","name":"Ghostlight","unlockedBy":{"kind":"memories","v":100},"glyphWeight":200,"player":{"hue":180,"light":18},"enemy":{"hue":-120,"light":14},"outline":"glow","css":{"--pc-weight":"200","--pc-player-hue":"180deg","--pc-player-light":"18%","--pc-enemy-hue":"-120deg","--pc-enemy-light":"14%","--pc-outline":"0 0 6px var(--piece-accent)"}}],"lines":{"battleWin":["The garrison breaks and runs. {place} flies your banner by dusk.","Their king lies tipped in the mud. The ledger smiles: +{gold} gold.","A clean win. Even the crows seem impressed.","The last defender kneels. Your pawns pretend they were never worried.","Steel meets steel and yours holds. {place} is yours.","They had the numbers. You had the plan.","The drums go quiet on their side of the field.","Victory, and a chest of +{gold} gold under the commander's cot.","Your {piece} stands on their king's square, looking smug.","A hard morning, a better afternoon. The field is held.","Songs tonight. Short ones; there is marching tomorrow."],"battleLoss":["The line folds. Survivors limp back toward the keep.","You lost the field at {place}. The dead are not coming back.","Their trap closed a move too early for you to see it.","A bitter day. Your {piece} fell holding the gap.","Retreat sounded. Not everyone heard it in time.","The enemy cheers. You count what is left.","Mud, smoke and one fewer banner. Regroup and rethink.","They read you like a ledger. Change the page.","The garrison holds. Your scouts will not meet your eye.","A rout. The road home feels longer than the road out."],"raid":["Raiders on the ridge! The mine at {place} is under attack.","Torches in the night. Someone wants your ore.","A horn from {place}: raiders, and they brought ladders.","The mine bell rings three times. That means trouble.","Dust on the eastern road. Too much dust for traders.","Raiders under {lord}'s colors are burning the pit-props.","The miners drop their picks and grab their spears.","A thin column of smoke rises over {place}. Ride hard.","Hooded riders circle the mine. They are not here to buy.","The night watch saw them first. Small comfort."],"raidRepelled":["Raiders driven off. The miners return to work, grumbling.","The mine at {place} holds. The raiders leave their ladders behind.","Repelled! Their loot sacks go home empty; yours gain +{gold} gold.","The garrison stood firm. Tonight they drink on your coin.","Raiders scattered into the hills. They will think twice.","Your {piece} held the gate alone for a while. Long enough.","Smoke clears. The ore carts are still full.","They came for silver and left with bruises.","The pit bell rings once: all clear.","A short, sharp fight. The mine never stopped smelting."],"raidLost":["The mine at {place} has fallen. Its income is gone.","Raiders carry off the ore and the pit-ponies.","The garrison is gone. {place} answers to someone else now.","You hear of it too late: the mine is lost.","They burned the hoist. It will take an army to take it back.","{lord} adds your mine to the ledger. In red ink.","The miners fled west. The tunnels are quiet.","Lost. The road to {place} is closed to your carts.","A blackened shaft and an empty strongbox.","Raiders hold the mine. Retake it, or learn to live poorer."],"cache":["A buried strongbox under the old milestone: +{gold} gold.","Your scouts find a deserter's stash. Nobody asks whose.","A cart abandoned in a ditch, its axle broken, its chest intact.","Under the floorboards of a burnt mill: coin, and a little luck.","A hollow oak full of tarnished crowns. +{gold} gold.","An old quartermaster's cache, still sealed with wax.","Someone hid supplies here and never came back for them.","The cellar of a ruined inn still has its barrels. And its till.","A pilgrim's purse, dropped and forgotten. Spend it kindly.","Your {piece} trips on a loose stone. Under it: gold.","A smuggler's cache wrapped in oilcloth: +{gold} gold."],"regionWin":["The rival's seat falls. {lord} flees east with what they can carry.","The region is yours. The roads east open before you.","{lord} yields the keep. The banners come down without a fight.","Bells ring in every village you hold. The march goes on.","Their citadel is taken; their name will be a song soon.","The seat is won. Somewhere further east, another lord is listening.","Your king rides through the broken gate at dawn.","The last of {lord}'s court kneels. Region won.","The map turns a page. Fresh fog, fresh roads.","Victory. The region's mines now ring for you alone."],"regionLose":["{lord} takes your keep. The region is lost.","Your king is cornered. The march ends here.","The keep burns. Memories are all you carry west.","The rival's banners rise over your walls.","Checkmate. The region forgets your name by spring.","Your court scatters into the fog.","{lord} sends a single line: \"Better luck, next life.\"","The last of your army lays down its arms.","The road you marched is the road you flee.","The region falls. Only the Memories remain."]},"effects":{"gold":{"params":{"v":["int",-2000,5000]},"nonzero":true,"text":"Gold now (negative = a price; option disabled if the player cannot pay).","used":10},"incomeFlat":{"params":{"v":["num",0.5,10]},"scopes":["region","run"],"text":"+v gold/min base income.","used":2},"mineIncomeMult":{"params":{"v":["num",1.05,2]},"scopes":["region","run"],"text":"Mine income x v.","used":2},"lootMult":{"params":{"v":["num",1.05,2]},"scopes":["next","region","run"],"text":"Battle loot x v.","used":3},"shopDiscount":{"params":{"v":["num",0.05,0.4]},"scopes":["region","run"],"text":"Shop prices x (1 - v); does not stack with a town coupon (max wins).","used":2},"squares":{"params":{"v":["int",1,3]},"text":"v free formation squares (next in SQUARE_ORDER); the square price ladder does not advance.","used":2},"addPiece":{"params":{"piece":["enum",["P","N","B","R","Q"]],"v":["int",1,2]},"text":"v free pieces join the roster (reserve); the shop price ladder does not advance.","used":3},"losePiece":{"params":{"piece":["enum",["P","N","B","R","Q"]],"v":["int",1,2]},"text":"v pieces leave the roster for good (reserve first, then formation); option disabled if not owned.","used":3},"promotePawn":{"params":{"to":["enum",["N","B","R","Q"]]},"text":"One pawn (the player picks) becomes this piece for good; option disabled with no pawn.","used":3},"tacticianElo":{"params":{"v":["int",-200,200]},"nonzero":true,"scopes":["next","region","run"],"text":"Player Tactician elo +v (clamped by cleanElo).","used":5},"enemyElo":{"params":{"v":["int",-200,200]},"nonzero":true,"scopes":["next","region","run"],"text":"Opposition elo +v (negative = easier enemies).","used":2},"enemyBudgetMult":{"params":{"v":["num",0.6,1.5]},"scopes":["next","region"],"text":"Enemy army budget x v (raids, garrisons, rival armies).","used":2},"trait":{"params":{"piece":["enum",["P","N","B","R","Q"]],"v":["int",1,2]},"scopes":["region","run"],"text":"Player dwelling level for this piece +v (capped at DWELL_MAX).","used":6},"enemyTrait":{"params":{"piece":["enum",["P","N","B","R","Q"]],"v":["int",1,2]},"scopes":["region"],"text":"Enemy trait level for this piece +v (curse).","used":1},"raidClock":{"params":{"v":["int",-600,900]},"nonzero":true,"text":"Raid timer +v ticks (positive = later, negative = sooner).","used":5},"rivalClock":{"params":{"v":["int",60,1200]},"text":"The rival's next action is delayed by v ticks (rival seconds).","used":3},"rivalStrength":{"params":{"v":["int",-2,2]},"nonzero":true,"text":"Rival strength bonus +v (negative weakens the rival).","used":2},"reveal":{"params":{"v":["int",1,4]},"text":"Lift fog on every node within v roads of the shrine.","used":2},"marchMult":{"params":{"v":["num",0.5,1.5]},"scopes":["region"],"text":"March ticks x v (below 1 = faster).","used":1},"bar":{"params":{"material":["enum",["iron","steel","obsidian"]],"v":["int",1,2]},"text":"v forge bars of this material.","used":3},"resource":{"params":{"res":["enum",["tin","coal","iron","shards"]],"v":["int",1,40]},"text":"v forge resource units (stock cap still applies).","used":3},"memoriesOnEnd":{"params":{"v":["int",1,10]},"text":"+v Memories when this run ends (abdicate or mate, never reduced by the mate penalty).","used":2},"combo":{"params":{},"text":"2-3 non-combo effects applied in order (all preconditions must hold).","used":11}}};
+(function () {
+  const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+  const WGLYPH = { K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙' };
+  const PIECE_NAME = { P: 'pawn', N: 'knight', B: 'bishop', R: 'rook', Q: 'queen', K: 'king' };
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const view = document.getElementById('view'), tabs = document.getElementById('tabs');
+  let store = {}; try { store = JSON.parse(localStorage.getItem('cm-content-demo') || '{}') || {}; } catch (e) { store = {}; }
+  const save = () => { try { localStorage.setItem('cm-content-demo', JSON.stringify(store)); } catch (e) { /* ignore */ } };
+
+  function effectChips(effect) {
+    const box = el('div', 'chips');
+    const parts = effect.kind === 'combo' ? effect.parts : [effect];
+    for (const p of parts) {
+      const args = Object.entries(p).filter(([k]) => k !== 'kind').map(([k, v]) => k + ':' + v).join(' ');
+      box.appendChild(el('span', 'chip', p.kind + (args ? ' ' + args : '')));
+    }
+    return box;
+  }
+  function docTag(d) { return el('span', 'doc ' + d, d); }
+
+  function renderShrines() {
+    const f = el('div');
+    const regions = [...new Set(DATA.shrines.map(c => c.minRegion))].sort((a, b) => a - b);
+    const cur = store.shrineRegion || 'all';
+    const tools = el('div', 'tools');
+    for (const r of ['all', ...regions]) {
+      const b = el('button', null, r === 'all' ? 'All regions' : 'From region ' + r);
+      b.setAttribute('aria-pressed', String(String(cur) === String(r)));
+      b.onclick = () => { store.shrineRegion = r; save(); show('shrines'); };
+      tools.appendChild(b);
+    }
+    f.appendChild(tools);
+    const g = el('div', 'grid');
+    for (const c of DATA.shrines) {
+      if (cur !== 'all' && c.minRegion !== +cur) continue;
+      const card = el('div', 'card');
+      card.appendChild(el('h3', null, c.name));
+      card.appendChild(el('div', 'meta', c.id + ' · from region ' + c.minRegion));
+      for (const side of ['a', 'b']) {
+        const o = el('div', 'opt');
+        o.appendChild(el('span', 'val', '≈' + Math.round(c[side].value) + ' g'));
+        o.appendChild(el('span', 'ab', side.toUpperCase()));
+        o.appendChild(el('span', 'lab', c[side].label));
+        o.appendChild(effectChips(c[side].effect));
+        card.appendChild(o);
+      }
+      g.appendChild(card);
+    }
+    f.appendChild(g);
+    return f;
+  }
+
+  function renderLords() {
+    const g = el('div', 'grid');
+    for (const l of DATA.lords) {
+      const card = el('div', 'card');
+      card.appendChild(docTag(l.doctrine));
+      card.appendChild(el('h3', null, l.name));
+      card.appendChild(el('div', 'meta', l.epithet));
+      card.appendChild(el('div', 'taunt', '“' + l.taunt + '”'));
+      card.appendChild(el('div', 'note', l.personalityNote));
+      const ch = el('div', 'chips');
+      ch.appendChild(el('span', 'chip', 'favors ' + l.favoredPieces.map(p => PIECE_NAME[p]).join(', ')));
+      ch.appendChild(el('span', 'chip', 'formations: ' + (l.formations.join(', ') || 'none')));
+      card.appendChild(ch);
+      g.appendChild(card);
+    }
+    return g;
+  }
+
+  function miniBoard(f) {
+    const b = el('div', 'board');
+    const at = {}; f.pieces.forEach((p, i) => { at[p.square] = { t: p.type, i }; });
+    for (let r = 8; r >= 1; r--) for (let c = 0; c < 8; c++) {
+      const name = 'abcdefgh'[c] + r, light = (c + r) % 2 === 1;
+      const sq = el('div', 'sq ' + (light ? 'l' : 'd') + (r < 5 ? ' off' : ''));
+      const p = at[name];
+      if (p) {
+        if (p.t === 'K') sq.classList.add('k');
+        sq.appendChild(el('span', 'pc', GLYPH[p.t]));
+        if (p.i > 0) sq.appendChild(el('span', 'ord', String(p.i)));
+        sq.title = PIECE_NAME[p.t] + ' ' + name + (p.i ? ' (slot ' + p.i + ')' : '');
+      }
+      b.appendChild(sq);
+    }
+    return b;
+  }
+  function renderFormations() {
+    const f = el('div');
+    const cur = store.fDoc || 'all';
+    const tools = el('div', 'tools');
+    for (const d of ['all', 'aggressive', 'solid', 'material', 'citadel']) {
+      const b = el('button', null, d === 'all' ? 'All' : d);
+      b.setAttribute('aria-pressed', String(cur === d));
+      b.onclick = () => { store.fDoc = d; save(); show('formations'); };
+      tools.appendChild(b);
+    }
+    f.appendChild(tools);
+    const g = el('div', 'grid');
+    for (const fm of DATA.formations) {
+      if (cur === 'citadel' ? !fm.citadel : cur !== 'all' && fm.doctrine !== cur) continue;
+      const card = el('div', 'card');
+      card.appendChild(docTag(fm.doctrine));
+      card.appendChild(el('h3', null, fm.name + (fm.citadel ? ' — citadel' : '')));
+      card.appendChild(el('div', 'meta', fm.budget + ' units · tiers ' + fm.tiers[0] + '–' + fm.tiers[1] + ' · ' + (fm.pieces.length - 1) + ' slots · favors ' + fm.favored.join('')));
+      card.appendChild(miniBoard(fm));
+      card.appendChild(el('div', 'legend', 'Small numbers: fill order. Ranks 1–4 dimmed.'));
+      g.appendChild(card);
+    }
+    f.appendChild(g);
+    return f;
+  }
+
+  function renderSets() {
+    const g = el('div', 'grid sets');
+    for (const s of DATA.pieceSets) {
+      const card = el('div', 'card');
+      card.appendChild(el('h3', null, s.name));
+      const u = s.unlockedBy;
+      const how = u.kind === 'default' ? 'Unlocked from the start' : u.kind === 'memories' ? u.v + ' lifetime Memories' :
+        u.kind === 'region' ? 'Reach region ' + u.v : u.kind === 'citadels' ? 'Win ' + u.v + ' rival seats' : 'Forge your first ' + u.material + ' bar';
+      card.appendChild(el('div', 'meta', how + ' · weight ' + s.glyphWeight + ' · outline ' + s.outline));
+      for (const side of ['player', 'enemy']) {
+        const row = el('div', 'row' + (side === 'enemy' ? ' e' : ''));
+        const t = s[side];
+        for (const k of ['K', 'Q', 'R', 'B', 'N', 'P']) {
+          const gl = el('span', 'g', side === 'enemy' ? GLYPH[k] : WGLYPH[k]);
+          gl.style.fontWeight = s.glyphWeight;
+          gl.style.textShadow = s.css['--pc-outline'];
+          gl.style.filter = 'brightness(' + (100 + t.light) + '%)';
+          gl.style.color = side === 'player' ? 'color-mix(in oklab, var(--piece-player) 72%, hsl(' + (40 + t.hue) + ' 70% 50%))'
+            : 'color-mix(in oklab, var(--piece-enemy) 70%, hsl(' + (40 + t.hue) + ' 60% 40%))';
+          row.appendChild(gl);
+        }
+        card.appendChild(row);
+      }
+      g.appendChild(card);
+    }
+    return g;
+  }
+
+  function renderLines() {
+    const f = el('div');
+    for (const [k, lines] of Object.entries(DATA.lines)) {
+      const s = el('section', 'sec card');
+      s.appendChild(el('h2', null, k.replace(/([A-Z])/g, ' $1').toLowerCase() + ' (' + lines.length + ')'));
+      const ul = el('ul', 'lines');
+      for (const line of lines) {
+        const li = el('li');
+        for (const part of line.split(/(\{\w+\})/)) li.appendChild(/^\{\w+\}$/.test(part) ? el('span', 'ph', part) : document.createTextNode(part));
+        ul.appendChild(li);
+      }
+      s.appendChild(ul); f.appendChild(s);
+      f.appendChild(el('div', null, '')).style.height = '10px';
+    }
+    return f;
+  }
+
+  function renderEffects() {
+    const w = el('div', 'tw'); const t = el('table');
+    const h = el('tr'); for (const c of ['kind', 'params', 'scopes', 'used', 'meaning']) h.appendChild(el('th', null, c)); t.appendChild(h);
+    for (const [k, d] of Object.entries(DATA.effects)) {
+      const tr = el('tr');
+      const c1 = el('td'); c1.appendChild(el('code', null, k)); tr.appendChild(c1);
+      const c2 = el('td'); c2.appendChild(el('code', null, Object.entries(d.params).map(([n, s]) => n + ':' + (s[0] === 'enum' ? s[1].join('|') : s[0] + '[' + s[1] + ',' + s[2] + ']')).join(' ') || '(parts)')); tr.appendChild(c2);
+      tr.appendChild(el('td', null, (d.scopes || []).join(', ') || '—'));
+      tr.appendChild(el('td', null, String(d.used)));
+      tr.appendChild(el('td', null, d.text));
+      t.appendChild(tr);
+    }
+    w.appendChild(t); return w;
+  }
+
+  const TABS = [
+    ['shrines', 'Shrines', () => DATA.shrines.length, renderShrines],
+    ['lords', 'Rival lords', () => DATA.lords.length, renderLords],
+    ['formations', 'Formations', () => DATA.formations.length, renderFormations],
+    ['sets', 'Piece sets', () => DATA.pieceSets.length, renderSets],
+    ['lines', 'Event lines', () => Object.values(DATA.lines).reduce((a, l) => a + l.length, 0), renderLines],
+    ['effects', 'Effect vocabulary', () => Object.keys(DATA.effects).length, renderEffects],
+  ];
+  function show(id) {
+    store.tab = id; save();
+    for (const b of tabs.children) b.setAttribute('aria-selected', String(b.dataset.id === id));
+    const tab = TABS.find(x => x[0] === id) || TABS[0];
+    view.replaceChildren(tab[3]());
+  }
+  for (const [id, label, count] of TABS) {
+    const b = el('button'); b.dataset.id = id; b.setAttribute('role', 'tab');
+    b.appendChild(document.createTextNode(label)); b.appendChild(el('span', 'n', String(count())));
+    b.onclick = () => show(id); tabs.appendChild(b);
+  }
+  document.getElementById('summary').textContent = 'content v' + DATA.version + ' · pure data, validated by test-content.mjs';
+  show(TABS.some(t => t[0] === store.tab) ? store.tab : 'shrines');
+})();
+</script>
